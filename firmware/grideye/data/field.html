@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CYBERDECK // FIELD</title>
+<style>
+:root{--bg:#020408;--panel:#0d1520;--cyan:#00fff9;--green:#39ff14;--amber:#ffb000;--text:#c8e8ff;--dim:#4a6a88;--border:#1a3a55}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:12px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+h1{font-size:1rem;color:var(--cyan);letter-spacing:.12em;margin-bottom:4px}
+.sub{font-size:.75rem;color:var(--dim);margin-bottom:12px}
+.stats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{font-size:.7rem;padding:4px 8px;border:1px solid var(--border);color:var(--dim)}
+.chip.on{color:var(--green);border-color:var(--green)}
+.chip.hs{color:var(--amber);border-color:var(--amber)}
+.panel{border:1px solid var(--border);background:var(--panel);padding:10px;margin-bottom:10px}
+.panel h2{font-size:.72rem;color:var(--cyan);letter-spacing:.1em;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:.72rem}
+th,td{padding:5px 4px;border-bottom:1px solid var(--border);text-align:left}
+th{color:var(--dim);font-weight:600}
+.open{color:var(--amber)}
+.hs{color:var(--green)}
+a{color:var(--cyan)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.btn{font-size:.72rem;padding:8px 12px;border:1px solid var(--border);background:#0a0f18;color:var(--text);text-decoration:none}
+.status{font-size:.75rem;color:var(--dim);min-height:1.2em}
+</style>
+</head>
+<body>
+<h1>CYBERDECK FIELD</h1>
+<p class="sub">Off-network recon — promiscuous Wi‑Fi + BLE. Handshakes saved to SD for offline analysis.</p>
+<div class="actions">
+  <a class="btn" href="/config.html">Configure Wi‑Fi</a>
+  <a class="btn" href="/">Full dashboard (when on LAN)</a>
+</div>
+<div class="stats" id="stats"></div>
+<div class="panel">
+  <h2>NEARBY WI‑FI APs</h2>
+  <table><thead><tr><th>SSID</th><th>CH</th><th>RSSI</th><th>CLI</th><th></th></tr></thead>
+  <tbody id="aps"></tbody></table>
+</div>
+<div class="panel">
+  <h2>BLE DEVICES</h2>
+  <table><thead><tr><th>Name</th><th>RSSI</th><th>Addr</th></tr></thead>
+  <tbody id="ble"></tbody></table>
+</div>
+<p class="status" id="status">Connecting…</p>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+async function refresh(){
+  try{
+    const r=await fetch('/api/recon/all',{cache:'no-store'});
+    if(r.status===503){$('#status').textContent='Deck busy — retrying…';return}
+    if(!r.ok)throw new Error(r.status);
+    const d=await r.json();
+    const s=d.stats||{};
+    $('#stats').innerHTML=`
+      <span class="chip">CH ${s.channel||'—'}</span>
+      <span class="chip">AP ${s.apCount||0}</span>
+      <span class="chip">Clients ${s.clientCount||0}</span>
+      <span class="chip hs">HS ${s.handshakeCount||0}</span>
+      <span class="chip ${s.capturing?'on':''}">${s.capturing?'REC':'CAP off'}</span>
+      <span class="chip ${s.bleRunning?'on':''}">${s.bleRunning?'BLE on':'BLE off'}</span>`;
+    const aps=(d.wifi&&d.wifi.aps)||[];
+    $('#aps').innerHTML=aps.length?aps.map(a=>`<tr>
+      <td>${esc(a.ssid||'<hidden>')}</td><td>${a.channel}</td><td>${a.rssi}</td>
+      <td>${a.clients||0}</td>
+      <td class="${a.handshake?'hs':''}">${a.secure===false?'OPEN':''}${a.handshake?' HS':''}</td></tr>`).join('')
+      :'<tr><td colspan="5">Sweeping channels…</td></tr>';
+    const devs=(d.ble&&d.ble.ble)||[];
+    $('#ble').innerHTML=devs.length?devs.slice(0,24).map(b=>{
+      const addr=b.addr||'';
+      return `<tr><td>${esc(b.name||'—')}</td><td>${b.rssi}</td><td>${esc(addr)}</td></tr>`;
+    }).join(''):'<tr><td colspan="3">Enable BLE on device screen</td></tr>';
+    $('#status').textContent=`Live · ${s.frameCount||0} frames · SD ${s.sdMounted?'ready':'missing'}`;
+  }catch(e){$('#status').textContent='Link lost — retrying…'}
+}
+setInterval(refresh,3500);
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "grids": [
+    {
+      "id": "home",
+      "name": "Home Sprawl",
+      "ssid": null,
+      "path": "home"
+    }
+  ]
+}

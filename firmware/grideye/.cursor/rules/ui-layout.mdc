@@ -1,0 +1,27 @@
+# CYD UI layout rules (320×240)
+
+All screens in `src/ui.cpp` must follow this grid. **Body content never overlaps the footer touch zone.**
+
+## Zones (Y axis)
+
+| Zone | Y range | Purpose |
+|------|---------|---------|
+| Header | 0–35 | Title, SCAN, status bar, top CANCEL |
+| Body | 36–205 | Lists, keyboard, panels, action buttons |
+| Footer | 206–239 | Single nav row (`drawFooterBack`, touch `y >= UI_FOOTER_TOP`) |
+
+Constants live in `src/config.h` (`UI_HEADER_BOTTOM`, `UI_BODY_BOTTOM`, `UI_FOOTER_TOP`, etc.).
+
+## Rules
+
+1. **One footer per screen** — never stack a footer on top of keyboard keys or list rows.
+2. **Password screen** — no footer; only top-left CANCEL. Keyboard bottom row ends above `UI_FOOTER_TOP`.
+3. **Scrollable lists** — use right-side ▲/▼ buttons (`drawScrollBtn`) when items exceed visible rows; show page indicator.
+4. **Touch handlers** — must match draw zones; check footer before body; use same constants as draw.
+5. **Text** — truncate long SSIDs/URLs; prefer 2-line banners over 3-line blocks in 32px height.
+6. **Main menu** — max 2 button rows; bottom row bottom ≤ 220; preview capped at 2 host + 2 Wi-Fi lines.
+
+## Before shipping UI changes
+
+- Grep for hardcoded `y=210`, `y=226`, `hitFooterBack` paired with overlapping draw rects.
+- Run `scripts/test_boot_ux.py` on hardware after touch-target changes.

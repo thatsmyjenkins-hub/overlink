@@ -1,0 +1,28 @@
+{
+  "found": true,
+  "risk": 15,
+  "band": "2.4GHz",
+  "coChannelCount": 1,
+  "isConnectedAp": true,
+  "connectedSsid": "TestNet",
+  "connectedBssid": "AA:BB:CC:DD:EE:01",
+  "scenarios": [
+    "signal_profile",
+    "channel_audit",
+    "ssid_collision",
+    "security_audit",
+    "rogue_check",
+    "pentest_recon"
+  ],
+  "ap": {
+    "ssid": "TestNet",
+    "bssid": "AA:BB:CC:DD:EE:01",
+    "rssi": -42,
+    "channel": 6,
+    "hidden": false,
+    "vendor": "Ubiquiti",
+    "encType": 3,
+    "enc": "WPA2",
+    "risk": 15
+  }
+}

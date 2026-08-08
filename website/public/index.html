@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OVERLINK — The portable home control brain</title>
+  <meta name="description" content="Overlink is a self-reliant home grid: SoftAP arrival, phone CTRL, WallDeck, Party Tricks, connectors, and an Overlink-owned relay. Walk into any home. Own the room in an hour." />
+  <meta property="og:title" content="OVERLINK — portable home control" />
+  <meta property="og:description" content="Core + phone + WallDeck. Arrival Wizard. Party Tricks. No laptop required on site." />
+  <meta property="og:image" content="/assets/screenshots/hero-atmosphere.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/">OVERLINK</a>
+      <nav class="nav-links">
+        <a href="#product">Product</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#features">Features</a>
+        <a href="#setup">Setup</a>
+        <a href="#flash">Flash</a>
+        <a href="#roadmap">Roadmap</a>
+        <a class="nav-cta" id="github-nav" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-media" aria-hidden="true"></div>
+    <div class="wrap hero-copy">
+      <p class="hero-brand">OVERLINK</p>
+      <h1>Walk into any home. Own the room in an hour.</h1>
+      <p>A portable control brain for lights, AV, cameras, and the weird wonderful junk every house already has — without baking that house into firmware.</p>
+      <div class="cta-row">
+        <a class="btn solid" href="#flash">Flash Core</a>
+        <a class="btn amber" id="github-hero" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">Open source</a>
+        <a class="btn" href="#setup">Setup guide</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="product">
+    <div class="wrap split">
+      <div>
+        <p class="kicker">The pitch</p>
+        <h2>Home control that travels with you.</h2>
+        <p class="lead">Most smart-home stacks assume one forever house, one cloud login, and a weekend of YAML. Overlink assumes you plug a Core into a new LAN, join Wi‑Fi from your phone, discover what’s already there, and start conducting the room.</p>
+        <p class="lead">Phone UI by default. WallDeck when you want a panel on the wall. CyberDeck when the room needs IR/RF muscle. SoftAP → Arrival → CTRL. Optional cloud bridges and an Overlink-owned relay when you leave the building.</p>
+        <p class="quote">If the first hour needs a laptop, we failed.</p>
+      </div>
+      <figure class="shot motion-fade">
+        <img src="/assets/screenshots/portal-home.png" alt="Overlink phone portal Home dashboard" width="720" height="1280" />
+        <figcaption>Phone portal · Home — live grid status</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="hardware">
+    <div class="wrap">
+      <p class="kicker">Hardware family</p>
+      <h2>Core required. Peers optional.</h2>
+      <p class="lead">Ship what the house needs. Absent peers degrade gracefully — Core + phone stays useful.</p>
+      <div class="grid-3">
+        <article class="tile">
+          <div class="tag">Required</div>
+          <h3>Overlink Core</h3>
+          <p>ESP32-S3 brain with TF storage, SoftAP onboarding, portable discovery, connectors vault, Party Tricks, and relay dial-out. Serves the CTRL phone UI at <code>overlink.local</code>.</p>
+        </article>
+        <article class="tile">
+          <div class="tag">Panel</div>
+          <h3>WallDeck</h3>
+          <p>CYD thin client for the wall. Scenes, zones, AV now-panel, Grace Party second screen, and Party Tricks chips that call Core — no house secrets burned into the glass.</p>
+        </article>
+        <article class="tile">
+          <div class="tag">Room peer</div>
+          <h3>CyberDeck</h3>
+          <p>IR + RF peer for TVs and the weird physical layer. If it’s offline, Overlink hides deck affordances instead of pretending the house is broken.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <p class="kicker">Capability map</p>
+      <h2>Everything you actually use — and a few things that make people grin.</h2>
+      <div class="grid-2" style="margin-bottom:2rem">
+        <figure class="shot">
+          <img src="/assets/screenshots/portal-basement.png" alt="Basement CTRL scene grid and AV panel" />
+          <figcaption>Zones · Basement CTRL — scenes + AV now</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/assets/screenshots/portal-party.png" alt="Party Tricks ops panel" />
+          <figcaption>Ops · Party Tricks — sweep, BLE, stampede, cast, print</figcaption>
+        </figure>
+      </div>
+      <div class="grid-3">
+        <article class="tile"><div class="tag">Arrival</div><h3>SoftAP → blank grid</h3><p>Join house Wi‑Fi from the phone. Core creates a blank per-SSID grid on the TF card — empty rooms/devices, ready for discovery. No reflash. No <code>av_secrets.h</code> edits on site.</p></article>
+        <article class="tile"><div class="tag">Discovery</div><h3>Portable LAN sweep</h3><p>Subnet fingerprints for WLED, Hue, Cast, CyberDeck, Fire/Vizio/PS5 ports, RTSP cameras, plus WiZ broadcast MAC map. Catalog ranks lights → AV → cameras.</p></article>
+        <article class="tile"><div class="tag">CTRL</div><h3>Phone + WallDeck IA</h3><p>Home · Zones · Scenes · Ops. Basement CTRL scene grid, Fire apps, volume, WLED, Hue rooms. WallDeck resumes last tab from NVS.</p></article>
+        <article class="tile"><div class="tag">Hue</div><h3>Link without compile secrets</h3><p>Press the bridge button, tap Link Hue. Username lands in the per-grid SD vault. Sync rooms into zones.</p></article>
+        <article class="tile"><div class="tag">Connectors</div><h3>Bridge + cloud vault</h3><p>Home Assistant import/control. Nest/Ring token vault stubs. Secrets stay on the grid’s SD path — not in firmware.</p></article>
+        <article class="tile"><div class="tag">Relay</div><h3>Expose without inbound ports</h3><p>Core dials out to your Overlink relay. Phone attaches over WSS with a short-lived session. Toggle expose off — remote path dies.</p></article>
+        <article class="tile"><div class="tag">Cameras</div><h3>Snapshot tiles</h3><p>RTSP :554 discovery + HTTP JPEG proxy paths (D‑Link-class stills). Bandwidth-honest on ESP — tiles, not an NVR.</p></article>
+        <article class="tile"><div class="tag">Party</div><h3>Showy on purpose</h3><p>mDNS+BLE sweep, BLE name billboard / cycle, light stampede, Chromecast stinger, open-printer text blast — family fun with a LAN awareness lesson.</p></article>
+        <article class="tile"><div class="tag">Games</div><h3>Grace Party Pack</h3><p>Phone as controller, WallDeck/TV as the room view. Party mode that doesn’t need another SaaS account.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="setup">
+    <div class="wrap split">
+      <div>
+        <p class="kicker">Setup</p>
+        <h2>From box to CTRL without a ritual.</h2>
+        <div class="steps">
+          <div class="step"><div><h3>Flash Core</h3><p>Use <a href="/flash.html">Flash from browser</a> (Chrome/Edge + USB) or PlatformIO USB once. Insert a TF card.</p></div></div>
+          <div class="step"><div><h3>Join SoftAP</h3><p>Phone joins open Wi‑Fi <strong>Overlink-Setup</strong>. Portal at <code>http://192.168.44.1</code>.</p></div></div>
+          <div class="step"><div><h3>Pick house Wi‑Fi</h3><p>Save SSID + passphrase. Core creates/activates a blank grid for that network and reboots into STA.</p></div></div>
+          <div class="step"><div><h3>Arrival Wizard</h3><p>On <code>http://overlink.local</code> — scan, add known devices, optional rooms, Link Hue if present.</p></div></div>
+          <div class="step"><div><h3>Optional peers</h3><p>Flash WallDeck / CyberDeck when you want panels or IR. They find Core via mDNS.</p></div></div>
+        </div>
+      </div>
+      <div>
+        <article class="tile" style="margin-bottom:1rem">
+          <div class="tag">Developer path</div>
+          <h3>Clone &amp; build</h3>
+          <p>Monorepo under <code>firmware/overlink-core</code>, <code>walldeck</code>, <code>cyberdeck</code>. Copy <code>av_secrets.example.h</code> only if you want local overrides — Arrival + SD vault are the product path.</p>
+          <p class="note" style="margin-top:0.8rem">
+            <code>cd firmware/overlink-core && pio run -t upload</code><br />
+            OTA later: <code>pio run -e overlink-core_ota -t upload</code>
+          </p>
+        </article>
+        <article class="tile">
+          <div class="tag">Relay</div>
+          <h3>Off-site optional</h3>
+          <p>Run <code>services/overlink-relay</code> on a host you control. Ops → Expose → enroll code. No router port forwards at the house.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="flash">
+    <div class="wrap">
+      <p class="kicker">Web flash</p>
+      <h2>Connect the board. Flash from the browser.</h2>
+      <p class="lead">Chrome or Edge on desktop. USB cable. ESP Web Tools talks Web Serial — no PlatformIO required for a first Core or WallDeck bring-up.</p>
+      <div class="grid-2">
+        <div class="flash-panel">
+          <h3>Overlink Core · ESP32-S3</h3>
+          <p style="color:var(--dim);margin:0">Waveshare ESP32-S3-LCD-1.47 (and compatible S3 boards). Erases and installs bootloader + partitions + firmware.</p>
+          <esp-web-install-button manifest="/firmware/core/manifest.json"></esp-web-install-button>
+          <p class="note">If the button is disabled, your browser lacks Web Serial — use Chrome/Edge, or flash via USB with PlatformIO.</p>
+        </div>
+        <div class="flash-panel">
+          <h3>WallDeck · ESP32 (CYD)</h3>
+          <p style="color:var(--dim);margin:0">ESP32-2432S028 class panels. Thin client — points at Core over the LAN.</p>
+          <esp-web-install-button manifest="/firmware/walldeck/manifest.json"></esp-web-install-button>
+          <p class="note">Hold BOOT if the serial port won’t appear. After flash, both decks currently announce as <code>walldeck</code> — distinct hostnames are on the roadmap.</p>
+        </div>
+      </div>
+      <p style="margin-top:1.25rem"><a class="btn" href="/flash.html">Open dedicated flash page</a></p>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <div class="wrap">
+      <p class="kicker">Roadmap</p>
+      <h2>Where this goes if we refuse to be boring.</h2>
+      <p class="lead">The coolest honest future — still self-reliant, still portable, still allergic to “buy another hub.”</p>
+      <div class="roadmap">
+        <div class="road-item"><div class="when">Now</div><div><h3>Self-reliant arrival + Party Tricks</h3><p>SoftAP grids, portable discovery, CTRL, Hue link, HA bridge, relay skeleton, cameras tiles, WallDeck party chips, web flash.</p></div></div>
+        <div class="road-item"><div class="when">Next</div><div><h3>Real cloud sign-in that toggles one device</h3><p>Finish Nest or Ring end-to-end OAuth from the phone Connectors panel. Tokens encrypted-at-rest on SD. Prove “new house, one login, one win.”</p></div></div>
+        <div class="road-item"><div class="when">Next</div><div><h3>Remote phone app path</h3><p>Feature-detect <code>overlink.local</code>, fall back to relay URL, same CTRL chrome off-LAN. Cellular stampede optional. Expose toggle remains the kill switch.</p></div></div>
+        <div class="road-item"><div class="when">Soon</div><div><h3>Fleet identity for WallDecks</h3><p><code>walldeck-a</code> / <code>walldeck-b</code>, room binding, presence LED sync, shared Grace scoreboard across panels.</p></div></div>
+        <div class="road-item"><div class="when">Soon</div><div><h3>Camera honesty upgrade</h3><p>ONVIF GetSnapshotUri, basic auth, bandwidth caps, and relay snapshot ferry for off-site tiles — still not an NVR.</p></div></div>
+        <div class="road-item"><div class="when">Horizon</div><div><h3>Matter only via bridges we don’t own</h3><p>Never pretend the ESP is a Thread border router. Import Matter entities through HA/local hubs the house already paid for.</p></div></div>
+        <div class="road-item"><div class="when">Horizon</div><div><h3>Overlink App Store (local)</h3><p>SD-loaded “tricks packs” and scene packs you can air-drop between grids — Party Tricks, Grace packs, AV profiles — without a cloud SKU.</p></div></div>
+        <div class="road-item"><div class="when">Dream</div><div><h3>Arrival that feels like a film cold open</h3><p>Plug in → SoftAP → join → lights identify in a wave → Cast stinger on the nearest TV → WallDeck wakes on the last scene. Guests think you live here.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap split">
+      <div>
+        <p class="kicker">Open source</p>
+        <h2>The code is the product.</h2>
+        <p class="lead">Firmware, relay, and this site live in one monorepo. Fork it. Flash it. Break a house (yours). Send the good parts back.</p>
+        <div class="cta-row">
+          <a class="btn solid" id="github-docs" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">GitHub repository</a>
+          <a class="btn" href="/flash.html">Flash devices</a>
+        </div>
+      </div>
+      <article class="tile">
+        <div class="tag">Principles</div>
+        <h3>Keep the stick honest</h3>
+        <p>No on-site IDE as a setup step. No baking house IPs into firmware. ESP is not a full Matter controller or NVR. Local first; cloud is a connector, not the landlord.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a class="brand" href="/">OVERLINK</a>
+      <div>Portable home control · Core · WallDeck · CyberDeck</div>
+      <div class="footer-row">
+        <span>© <span id="y"></span> Overlink · Built to travel</span>
+        <span><a id="github-foot" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">GitHub</a> · <a href="#flash">Flash</a> · <a href="#roadmap">Roadmap</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

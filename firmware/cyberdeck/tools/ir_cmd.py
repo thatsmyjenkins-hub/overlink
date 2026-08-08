@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import argparse, serial, time, sys
+p = argparse.ArgumentParser()
+p.add_argument("cmd")
+p.add_argument("--port", default="/dev/cu.usbserial-1310")
+p.add_argument("--wait", type=float, default=1.5)
+args = p.parse_args()
+ser = serial.Serial(args.port, 115200, timeout=0.3)
+time.sleep(0.15)
+ser.reset_input_buffer()
+payload = (args.cmd.strip() + "\n").encode()
+print(f">>> send {args.cmd!r}")
+ser.write(payload)
+time.sleep(args.wait)
+out = ser.read(8000)
+sys.stdout.write(out.decode("utf-8", errors="replace"))
+ser.close()

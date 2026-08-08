@@ -1,0 +1,17 @@
+{
+  "name": "overlink-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Overlink-owned dial-out relay (WSS clients + HTTP Core agent)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

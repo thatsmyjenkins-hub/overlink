@@ -1,0 +1,26 @@
+{
+  "found": true,
+  "ip": "192.168.1.100",
+  "latency": 12,
+  "risk": 85,
+  "lastSeen": 400,
+  "mac": "11:22:33:44:55:64",
+  "vendor": "Dell",
+  "deviceType": "PC",
+  "osGuess": "Windows",
+  "banner": "Apache/2.4.41",
+  "profileConf": 88,
+  "profiled": true,
+  "cveCount": 2,
+  "count": 2,
+  "dbLoaded": true,
+  "cves": [
+    { "id": "CVE-2019-0708", "severity": "CRITICAL", "cvss": 9.8, "summary": "BlueKeep RDP", "source": "curated-db" },
+    { "id": "EXPOSURE-HTTP-ADMIN", "severity": "MEDIUM", "cvss": 5.3, "summary": "HTTP admin exposed", "source": "curated-db" }
+  ],
+  "services": [
+    { "port": 22, "name": "SSH", "severity": "INFO" },
+    { "port": 80, "name": "HTTP", "severity": "WARN" },
+    { "port": 445, "name": "SMB", "severity": "CRITICAL" }
+  ]
+}

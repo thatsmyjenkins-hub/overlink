@@ -1,0 +1,14 @@
+{
+  "name": "cyd2-cyberdeck",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mock:server": "node scripts/mock_intel_server.mjs",
+    "test:api": "node --test tests/api.contract.test.mjs",
+    "test:e2e": "playwright test",
+    "test:web": "node scripts/run_web_tests.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "scenes": [
+    { "id": "house-off", "name": "House Off", "tag": "OFF", "scope": "home", "confirm": true },
+    { "id": "full", "name": "Full Blast", "tag": "FULL", "scope": "zone", "zoneId": "basement" },
+    { "id": "chill", "name": "Dudes Chill", "tag": "CHILL", "scope": "zone", "zoneId": "basement" },
+    { "id": "movie", "name": "Movie", "tag": "MOVIE", "scope": "zone", "zoneId": "basement" },
+    { "id": "game", "name": "Game Night", "tag": "GAME", "scope": "zone", "zoneId": "basement" },
+    { "id": "sports", "name": "Sports", "tag": "SPORTS", "scope": "zone", "zoneId": "basement" },
+    { "id": "bed", "name": "Bedtime", "tag": "BED", "scope": "zone", "zoneId": "basement" },
+    { "id": "dance", "name": "Girls Dance", "tag": "DANCE", "scope": "zone", "zoneId": "basement", "accent": true },
+    { "id": "date", "name": "Date Night", "tag": "DATE", "scope": "zone", "zoneId": "basement", "accent": true },
+    { "id": "karaoke", "name": "Karaoke", "tag": "KARAOKE", "scope": "zone", "zoneId": "basement", "accent": true },
+    { "id": "off", "name": "All Off", "tag": "OFF", "scope": "zone", "zoneId": "basement", "confirm": true }
+  ]
+}

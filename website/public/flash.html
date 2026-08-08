@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flash Overlink — browser install</title>
+  <meta name="description" content="Flash Overlink Core or WallDeck over USB using Web Serial. Chrome or Edge required." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/">OVERLINK</a>
+      <nav class="nav-links">
+        <a href="/#setup">Setup</a>
+        <a href="/">Product</a>
+        <a class="nav-cta" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">Installer</p>
+      <h2>Flash from the browser</h2>
+      <p class="lead">Plug the board in over USB. Use Chrome or Edge on a computer. Pick the serial port when prompted. First install erases the flash.</p>
+
+      <div class="grid-2">
+        <div class="flash-panel">
+          <h3>1 · Overlink Core</h3>
+          <p style="color:var(--dim);margin:0 0 0.5rem">Chip family: <strong style="color:var(--active)">ESP32-S3</strong></p>
+          <p style="color:var(--dim);margin:0">After flash: join SoftAP <code>Overlink-Setup</code>, pick house Wi‑Fi, open <code>overlink.local</code>.</p>
+          <esp-web-install-button manifest="/firmware/core/manifest.json"></esp-web-install-button>
+        </div>
+        <div class="flash-panel">
+          <h3>2 · WallDeck</h3>
+          <p style="color:var(--dim);margin:0 0 0.5rem">Chip family: <strong style="color:var(--active)">ESP32</strong> (CYD 2.8")</p>
+          <p style="color:var(--dim);margin:0">Needs Core already on the same LAN. WallDeck resolves <code>overlink.local</code>.</p>
+          <esp-web-install-button manifest="/firmware/walldeck/manifest.json"></esp-web-install-button>
+        </div>
+      </div>
+
+      <article class="tile" style="margin-top:1.5rem">
+        <div class="tag">Troubleshooting</div>
+        <h3>Port missing / failed</h3>
+        <p>Hold BOOT while plugging in. Close serial monitors. On macOS, grant Chrome serial permission. Drivers: CP210x / CH340 depending on the board. Still stuck? <code>pio run -t upload</code> from the monorepo USB once, then use OTA forever after.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a class="brand" href="/">OVERLINK</a>
+      <div class="footer-row">
+        <span>Web Serial installer · ESP Web Tools</span>
+        <a href="/">← Back to product</a>
+      </div>
+    </div>
+  </footer>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "zones": [
+    { "id": "basement", "name": "Basement", "sort": 0 },
+    { "id": "living-room", "name": "Living Room", "sort": 1 },
+    { "id": "kitchen", "name": "Kitchen", "sort": 2 },
+    { "id": "entry", "name": "Entry", "sort": 3 },
+    { "id": "bedroom", "name": "Bedroom", "sort": 4 },
+    { "id": "emmas-room", "name": "Emma's Room", "sort": 5 },
+    { "id": "downstairs", "name": "Downstairs", "sort": 6 }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "home",
+  "name": "Home Sprawl",
+  "ssid": null,
+  "timezone": "America/Chicago",
+  "notes": "Seeded from BasementController — bind SSID on first Overlink-Setup join"
+}

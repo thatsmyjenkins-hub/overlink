@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "action": "signal_profile",
+  "bssid": "AA:BB:CC:DD:EE:01",
+  "ssid": "TestNet",
+  "message": "Signal profile complete",
+  "rssiMin": -48,
+  "rssiMax": -40,
+  "rssiAvg": -43,
+  "rssiSamples": 5,
+  "findings": [
+    { "severity": "ok", "title": "Stable RSSI", "detail": "Signal strength consistent across samples." }
+  ]
+}

@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "sources": [
+    "MITRE CVE List (public)",
+    "NVD (public summaries)",
+    "CIRCL CVE Search API (live fallback via /api/intel/cve)"
+  ],
+  "rules": [
+    {
+      "id": "CVE-2017-0144",
+      "severity": "CRITICAL",
+      "cvss": 8.1,
+      "summary": "SMBv1 remote code execution (EternalBlue family)",
+      "ports": [445],
+      "types": ["PC", "Server"]
+    },
+    {
+      "id": "CVE-2019-0708",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "summary": "BlueKeep — unauthenticated RDP remote code execution",
+      "ports": [3389],
+      "types": ["PC", "Server"]
+    },
+    {
+      "id": "CVE-2021-44228",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "summary": "Log4Shell — RCE via JNDI in Java logging (if Log4j exposed)",
+      "banners": ["log4j", "java", "tomcat"]
+    },
+    {
+      "id": "CVE-2020-1472",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "summary": "Zerologon — Netlogon privilege escalation on domain controllers",
+      "ports": [445],
+      "types": ["Server"]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Heartbleed — OpenSSL TLS memory disclosure",
+      "ports": [443, 8443],
+      "banners": ["openssl", "nginx", "apache"]
+    },
+    {
+      "id": "CVE-2023-34362",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "summary": "MOVEit Transfer SQL injection / RCE (if MOVEit present)",
+      "banners": ["moveit"]
+    },
+    {
+      "id": "CVE-2018-10562",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "summary": "Dasan GPON routers — authenticated RCE (ISP CPE class)",
+      "vendors": ["Dasan", "TP-Link"],
+      "types": ["Router", "IoT"]
+    },
+    {
+      "id": "CVE-2020-9054",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "summary": "Zyxel NAS/Router unauthenticated command injection",
+      "types": ["NAS", "Router"]
+    },
+    {
+      "id": "CVE-2021-36260",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "summary": "Hikvision cameras — command injection in web server",
+      "vendors": ["Hikvision"],
+      "types": ["Camera"]
+    },
+    {
+      "id": "CVE-2017-7921",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Hikvision — authentication bypass in IP cameras",
+      "vendors": ["Hikvision"],
+      "types": ["Camera"]
+    },
+    {
+      "id": "CVE-2018-9995",
+      "severity": "HIGH",
+      "cvss": 9.8,
+      "summary": "DVR/IP camera credential disclosure via HTTP",
+      "types": ["Camera", "IoT"],
+      "ports": [80, 8080]
+    },
+    {
+      "id": "CVE-2016-10401",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "summary": "Netgear WNR — telnet backdoor with hardcoded creds",
+      "vendors": ["NETGEAR", "Netgear"],
+      "ports": [23],
+      "types": ["Router"]
+    },
+    {
+      "id": "CVE-2019-17621",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "summary": "D-Link DIR — unauthenticated LAN RCE",
+      "vendors": ["D-Link", "TP-Link"],
+      "types": ["Router"]
+    },
+    {
+      "id": "CVE-2022-30075",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "summary": "TP-Link Archer AX — authentication bypass",
+      "vendors": ["TP-Link"],
+      "types": ["Router"]
+    },
+    {
+      "id": "CVE-2019-1652",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "summary": "Cisco RV — command injection via web UI",
+      "vendors": ["Cisco"],
+      "types": ["Router"]
+    },
+    {
+      "id": "CVE-2020-10173",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Ubiquiti UniFi — log injection / limited RCE chain",
+      "vendors": ["Ubiquiti"],
+      "types": ["Router", "AP"]
+    },
+    {
+      "id": "CVE-2015-0554",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "summary": "Belkin routers — password disclosure in firmware",
+      "vendors": ["Belkin"],
+      "types": ["Router"]
+    },
+    {
+      "id": "CVE-2014-9222",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Misfortune Cookie — CPE router admin RCE (Allegro RomPager)",
+      "types": ["Router", "IoT"],
+      "ports": [80, 8080]
+    },
+    {
+      "id": "CVE-2018-7600",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "summary": "Drupalgeddon2 — Drupal core RCE",
+      "banners": ["drupal"]
+    },
+    {
+      "id": "CVE-2019-5418",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Rails — file disclosure via Accept header",
+      "banners": ["ruby", "rails"]
+    },
+    {
+      "id": "CVE-2021-23017",
+      "severity": "HIGH",
+      "cvss": 7.7,
+      "summary": "nginx DNS resolver — 1-byte heap overwrite (specific builds)",
+      "banners": ["nginx"]
+    },
+    {
+      "id": "CVE-2023-4966",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Citrix Bleed — session token leak in NetScaler ADC/Gateway",
+      "banners": ["citrix"]
+    },
+    {
+      "id": "CVE-2017-9833",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Sonos — directory traversal in HTTP API",
+      "vendors": ["Sonos"],
+      "types": ["Speaker", "IoT"]
+    },
+    {
+      "id": "CVE-2020-11899",
+      "severity": "HIGH",
+      "cvss": 8.2,
+      "summary": "Treck TCP/IP stack — Ripple20 class (IoT embedded stacks)",
+      "types": ["IoT", "Camera", "Printer"]
+    },
+    {
+      "id": "CVE-2016-6277",
+      "severity": "HIGH",
+      "cvss": 8.0,
+      "summary": "Netgear — unauthenticated command injection in WiFi routers",
+      "vendors": ["NETGEAR", "Netgear"],
+      "types": ["Router"]
+    },
+    {
+      "id": "CVE-2022-46169",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "summary": "Cacti — unauthenticated RCE in monitoring installs",
+      "banners": ["cacti"]
+    },
+    {
+      "id": "CVE-2019-11072",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "summary": "Espressif ESP-IDF — WiFi stack issues on IoT MCUs",
+      "vendors": ["Espressif"],
+      "types": ["IoT", "Embedded"]
+    },
+    {
+      "id": "CVE-2023-28252",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "summary": "Windows CLFS — local privilege escalation (patch Windows hosts)",
+      "types": ["PC", "Server"],
+      "ports": [445, 3389]
+    },
+    {
+      "id": "EXPOSURE-OPEN-TELNET",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "summary": "[Exposure rule] Telnet open — cleartext creds; common IoT botnet entry (not a specific CVE)",
+      "ports": [23]
+    },
+    {
+      "id": "EXPOSURE-HTTP-ADMIN",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "summary": "[Exposure rule] HTTP admin interface exposed — brute-force and default-cred risk",
+      "ports": [80, 8080],
+      "types": ["Router", "Camera", "IoT", "NAS"]
+    }
+  ]
+}

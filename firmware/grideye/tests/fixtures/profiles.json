@@ -1,0 +1,12 @@
+{
+  "count": 3,
+  "profiled": 2,
+  "totalCves": 3,
+  "vulnRules": 28,
+  "vulnDbLoaded": true,
+  "profiles": [
+    { "ip": "192.168.1.1", "latency": 4, "risk": 35, "ports": 2, "open": [80, 443], "mac": "11:22:33:44:55:01", "vendor": "Ubiquiti", "deviceType": "Router", "osGuess": "Linux", "profileConf": 72, "cveCount": 0, "profiled": true },
+    { "ip": "192.168.1.100", "latency": 12, "risk": 85, "ports": 3, "open": [22, 80, 445], "mac": "11:22:33:44:55:64", "vendor": "Dell", "deviceType": "PC", "osGuess": "Windows", "profileConf": 88, "cveCount": 2, "profiled": true },
+    { "ip": "192.168.1.200", "latency": 28, "risk": 55, "ports": 1, "open": [80], "mac": "", "vendor": "Sonos", "deviceType": "Speaker", "osGuess": "Embedded", "profileConf": 45, "cveCount": 1, "profiled": false }
+  ]
+}

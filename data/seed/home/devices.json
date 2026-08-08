@@ -1,0 +1,338 @@
+{
+  "devices": [
+    {
+      "id": "wiz-back-left",
+      "zoneId": "basement",
+      "type": "wiz_bulb",
+      "name": "Back Left",
+      "mac": "6c29900ca2e4",
+      "fallbackIp": "192.168.4.64"
+    },
+    {
+      "id": "wiz-back-right",
+      "zoneId": "basement",
+      "type": "wiz_bulb",
+      "name": "Back Right",
+      "mac": "6c299007c19f",
+      "fallbackIp": "192.168.4.63"
+    },
+    {
+      "id": "wiz-front-left",
+      "zoneId": "basement",
+      "type": "wiz_bulb",
+      "name": "Front Left",
+      "mac": "6c29900bc4f6",
+      "fallbackIp": "192.168.4.62"
+    },
+    {
+      "id": "wiz-front-right",
+      "zoneId": "basement",
+      "type": "wiz_bulb",
+      "name": "Front Right",
+      "mac": "6c29900a5fe6",
+      "fallbackIp": "192.168.4.65"
+    },
+    {
+      "id": "wled-basement",
+      "zoneId": "basement",
+      "type": "wled",
+      "name": "Basement Strip",
+      "mac": "40915150c486",
+      "fallbackIp": "192.168.4.39",
+      "port": 80
+    },
+    {
+      "id": "cyberdeck-basement",
+      "zoneId": "basement",
+      "type": "cyberdeck",
+      "name": "Basement CyberDeck",
+      "hostname": "cyberdeck",
+      "fallbackIp": "192.168.4.50",
+      "port": 80,
+      "mac": "b8d61a5b7aa4"
+    },
+    {
+      "id": "vizio-basement",
+      "zoneId": "basement",
+      "type": "vizio",
+      "name": "Basement Vizio",
+      "fallbackIp": "192.168.4.81",
+      "port": 7345
+    },
+    {
+      "id": "firetv-basement",
+      "zoneId": "basement",
+      "type": "firetv",
+      "name": "Fire TV",
+      "fallbackIp": "192.168.4.182",
+      "port": 5555
+    },
+    {
+      "id": "sony-avr",
+      "zoneId": "basement",
+      "type": "sony",
+      "name": "Sony AVR",
+      "fallbackIp": "192.168.4.56",
+      "port": 8080
+    },
+    {
+      "id": "tcl-tv",
+      "zoneId": "basement",
+      "type": "tcl",
+      "name": "TCL TV",
+      "fallbackIp": "192.168.4.163",
+      "port": 6467
+    },
+    {
+      "id": "hue-5",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Aaron\u2019s Lamp",
+      "hueId": "5",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-10",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Clandelier 3",
+      "hueId": "10",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-11",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Emma\u2019s Lamp",
+      "hueId": "11",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-13",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Back Room 5",
+      "hueId": "13",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-14",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Back Room 1",
+      "hueId": "14",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-15",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Back room 4",
+      "hueId": "15",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-16",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Back Room 3",
+      "hueId": "16",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-18",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Back Room 2",
+      "hueId": "18",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-19",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Entry Ceiling Lamp",
+      "hueId": "19",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-20",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Chandelier 1",
+      "hueId": "20",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-21",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Fan Lamp 1",
+      "hueId": "21",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-22",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Green Lamp 2",
+      "hueId": "22",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-23",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Fan Lamp 2",
+      "hueId": "23",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-24",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Chandelier 2",
+      "hueId": "24",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-25",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Vickie\u2019s Lamp",
+      "hueId": "25",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-26",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Dresser Lamp",
+      "hueId": "26",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-27",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Green Lamp 1",
+      "hueId": "27",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-28",
+      "zoneId": "home",
+      "type": "hue",
+      "name": "Emmas Lamp",
+      "hueId": "28",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "hue-29",
+      "zoneId": "basement",
+      "type": "hue",
+      "name": "Basement lamp",
+      "hueId": "29",
+      "fallbackIp": "192.168.4.57",
+      "port": 80
+    },
+    {
+      "id": "ps5",
+      "type": "ps5",
+      "name": "PlayStation 5",
+      "zoneId": "basement",
+      "mac": "d4f7d5c6fe4c",
+      "fallbackIp": "192.168.4.69",
+      "port": 9295
+    },
+    {
+      "id": "cast-downstairs",
+      "type": "cast",
+      "name": "Audio Downstairs TV",
+      "zoneId": "home",
+      "fallbackIp": "192.168.4.91",
+      "port": 8008
+    },
+    {
+      "id": "hue_group-1",
+      "type": "hue_group",
+      "name": "Living Room",
+      "hueId": "1",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    },
+    {
+      "id": "hue_group-2",
+      "type": "hue_group",
+      "name": "Kitchen",
+      "hueId": "2",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    },
+    {
+      "id": "hue_group-3",
+      "type": "hue_group",
+      "name": "Entry Room",
+      "hueId": "3",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    },
+    {
+      "id": "hue_group-4",
+      "type": "hue_group",
+      "name": "Emma\u2019s Room",
+      "hueId": "4",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    },
+    {
+      "id": "hue_group-6",
+      "type": "hue_group",
+      "name": "Downstairs",
+      "hueId": "6",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    },
+    {
+      "id": "hue_group-7",
+      "type": "hue_group",
+      "name": "Bedroom",
+      "hueId": "7",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    },
+    {
+      "id": "hue_group-8",
+      "type": "hue_group",
+      "name": "Emmas Room",
+      "hueId": "8",
+      "fallbackIp": "192.168.4.57",
+      "port": 80,
+      "zoneId": "home"
+    }
+  ]
+}

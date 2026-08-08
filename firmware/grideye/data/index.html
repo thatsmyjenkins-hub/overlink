@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CYBERDECK // NET INTEL</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="grid-bg"></div>
+<div id="app">
+  <header class="top">
+    <div class="logo">CYBER<span>DECK</span></div>
+    <div class="ticker" id="ticker">Connecting…</div>
+    <div class="header-actions">
+      <button type="button" class="btn-ghost" id="toggle-guides" title="Help walkthroughs">HELP</button>
+      <div class="badge" id="live-badge" style="border:1px solid var(--cyan)">LIVE</div>
+    </div>
+  </header>
+
+  <button type="button" id="nav-back" class="nav-back hidden" aria-label="Go back">← BACK TO DASHBOARD</button>
+
+  <nav class="nav nav-secondary">
+    <button data-view="home" class="active">HOME</button>
+    <button data-view="netmap">LAN MAP</button>
+    <button data-view="spectrum">WI-FI</button>
+    <button data-view="profiles">DEVICES</button>
+    <button data-view="phantom">THREATS</button>
+  </nav>
+
+  <div class="breadcrumb" id="breadcrumb"></div>
+
+  <div class="progress-wrap"><div class="progress-fill" id="scan-progress" style="width:0%"></div></div>
+  <div id="scan-status" class="scan-status" aria-live="polite"></div>
+  <div id="ops-bar" class="ops-bar" aria-live="polite"></div>
+  <div id="tab-guide" class="tab-guide"></div>
+
+  <!-- HOME — dashboard + apps + share -->
+  <section id="view-home" class="view">
+    <div class="panel panel-compact" data-label="CYBERDECK HOME">
+      <p class="panel-desc" style="margin:0">
+        Live LAN/Wi‑Fi intelligence from your deck. Use <strong>Applications</strong> for focused views or <strong>Share</strong> to export.
+      </p>
+    </div>
+
+    <div class="panel" data-label="DECK CONTROL">
+      <p class="panel-desc">Orchestrate scans and profiling on the ESP32 from your browser. Commands run locally on the deck; use playbooks to chain steps.</p>
+      <div class="orch-meta" id="orch-meta"></div>
+      <div class="orch-grid" id="orch-actions"></div>
+      <div class="orch-playbooks">
+        <span class="orch-label">Playbooks</span>
+        <button type="button" class="btn-orch btn-orch-primary" id="btn-playbook-recon">Full recon</button>
+        <button type="button" class="btn-orch" id="btn-playbook-scan-export">Scan + export</button>
+        <button type="button" class="btn-orch" id="btn-playbook-profile-export">Profile all + export</button>
+      </div>
+      <p class="orch-status" id="orch-status" aria-live="polite"></p>
+    </div>
+
+    <div class="panel" data-label="APPLICATIONS">
+      <div class="app-launcher" id="app-launcher"></div>
+    </div>
+
+    <div class="panel" data-label="SHARE NETWORK INTEL">
+      <p class="panel-desc">Export a snapshot for reports, tickets, or sharing with your team. All data stays on your LAN unless you send it.</p>
+      <div class="share-actions" id="share-actions">
+        <button type="button" class="btn-share" id="btn-copy-url">Copy dashboard link</button>
+        <button type="button" class="btn-share" id="btn-copy-json">Copy JSON</button>
+        <button type="button" class="btn-share" id="btn-download-json">Download JSON</button>
+        <button type="button" class="btn-share" id="btn-download-report">Download report</button>
+        <button type="button" class="btn-share btn-share-primary" id="btn-web-share">Share…</button>
+        <button type="button" class="btn-share" id="btn-refresh-export">Refresh snapshot on deck</button>
+      </div>
+      <p class="share-status" id="share-status" aria-live="polite"></p>
+    </div>
+
+    <div class="stats stats-dash">
+      <div class="stat"><div class="val" data-stat="hostCount">—</div><div class="lbl">LAN HOSTS</div></div>
+      <div class="stat"><div class="val" data-stat="wifiCount">—</div><div class="lbl">WI-FI APs</div></div>
+      <div class="stat"><div class="val" data-stat="openPorts">—</div><div class="lbl">OPEN PORTS</div></div>
+      <div class="stat"><div class="val" data-stat="maxRisk">—</div><div class="lbl">MAX RISK</div></div>
+    </div>
+
+    <div class="panel panel-compact" data-label="YOUR NETWORK">
+      <p class="link-line">
+        Connected as <strong data-stat="ssid">—</strong> ·
+        <strong style="color:var(--cyan)" data-stat="ip">—</strong> ·
+        <a id="dash-url" href="#" target="_blank" rel="noopener">open dashboard</a>
+      </p>
+      <p class="panel-desc" style="margin:0">Tap any <strong>host row</strong> for ports, profile, and CVE matches. Data refreshes every 2.5s.</p>
+    </div>
+
+    <div id="dashboard-alerts" class="alerts-wrap"></div>
+
+    <div class="dashboard-grid">
+      <div class="panel" data-label="LAN HOSTS — TAP FOR DETAIL">
+        <div class="table-scroll">
+          <table class="data-table" id="dashboard-hosts">
+            <thead><tr><th>IP</th><th>VENDOR</th><th>TYPE</th><th>PORTS</th><th>RISK</th><th></th></tr></thead>
+            <tbody id="dashboard-hosts-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel" data-label="NEARBY WI-FI">
+        <div class="table-scroll">
+          <table class="data-table" id="dashboard-wifi">
+            <thead><tr><th>SSID</th><th>VENDOR</th><th>CH</th><th>ENC</th><th>RSSI</th></tr></thead>
+            <tbody id="dashboard-wifi-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" data-label="SCAN LOG (FLASH)">
+      <p class="panel-desc" style="margin:0 0 8px">Persists to <code>/intel_events.log</code> on the deck — survives reboot and Wi‑Fi reconnect.</p>
+      <div class="event-log" id="event-log"></div>
+    </div>
+  </section>
+
+  <section id="view-spectrum" class="view hidden">
+    <div id="spectrum-body"></div>
+  </section>
+
+  <section id="view-netmap" class="view hidden">
+    <canvas id="radar"></canvas>
+    <div class="panel" data-label="HOST TABLE" style="margin-top:14px">
+      <table class="data-table">
+        <thead><tr><th>NAME</th><th>IP</th><th>VIA</th><th>RTT</th><th>PORTS</th><th>RISK</th></tr></thead>
+        <tbody id="host-list"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="view-phantom" class="view hidden">
+    <div id="phantom-body"></div>
+  </section>
+
+  <section id="view-profiles" class="view hidden">
+    <div id="profiles-body"></div>
+  </section>
+
+  <section id="view-host" class="view hidden">
+    <div id="host-guide"></div>
+    <div class="panel host-detail" data-label="HOST DETAIL">
+      <div id="host-detail"></div>
+      <div id="host-scenarios" class="orch-grid host-scenarios"></div>
+      <p id="host-action-status" class="orch-status hidden"></p>
+      <div id="host-forensics" class="host-forensics hidden"></div>
+    </div>
+  </section>
+
+  <section id="view-ap" class="view hidden">
+    <div id="ap-guide"></div>
+    <div class="panel host-detail" data-label="AP FORENSICS — TAP A ROW ON WI-FI">
+      <div id="ap-detail"></div>
+      <p class="panel-desc ap-tools-label hidden" id="ap-tools-label">AP tools — tap to run on the deck</p>
+      <div id="ap-scenarios" class="orch-grid ap-scenarios hidden"></div>
+      <p id="ap-action-status" class="orch-status hidden"></p>
+      <div id="ap-action-results"></div>
+    </div>
+  </section>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

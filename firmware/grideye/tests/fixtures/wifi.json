@@ -1,0 +1,10 @@
+{
+  "count": 5,
+  "aps": [
+    { "ssid": "TestNet", "bssid": "AA:BB:CC:DD:EE:01", "rssi": -42, "channel": 6, "enc": "WPA2", "encType": 3, "hidden": false, "risk": 15, "vendor": "Ubiquiti" },
+    { "ssid": "GuestOpen", "bssid": "AA:BB:CC:DD:EE:02", "rssi": -67, "channel": 11, "enc": "OPEN", "encType": 0, "hidden": false, "risk": 90, "vendor": "TP-Link" },
+    { "ssid": "<HIDDEN>", "bssid": "AA:BB:CC:DD:EE:03", "rssi": -72, "channel": 1, "enc": "WPA2", "encType": 3, "hidden": true, "risk": 40, "vendor": "Unknown" },
+    { "ssid": "Neighbor", "bssid": "AA:BB:CC:DD:EE:04", "rssi": -80, "channel": 6, "enc": "WPA2", "encType": 3, "hidden": false, "risk": 15, "vendor": "NETGEAR" },
+    { "ssid": "TestNet", "bssid": "AA:BB:CC:DD:EE:05", "rssi": -55, "channel": 6, "enc": "WPA2", "encType": 3, "hidden": false, "risk": 15, "vendor": "Unknown" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "count": 3,
+  "hosts": [
+    { "ip": "192.168.1.1", "name": "router.local", "discoveredBy": "mdns", "latency": 4, "risk": 35, "ports": 2, "open": [80, 443] },
+    { "ip": "192.168.1.100", "name": "office-pc.local", "discoveredBy": "tcp", "latency": 12, "risk": 85, "ports": 3, "open": [22, 80, 445] },
+    { "ip": "192.168.1.200", "name": "Living-Room", "discoveredBy": "ssdp", "latency": 28, "risk": 55, "ports": 1, "open": [80] }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "events": [
+    "10s CYBERDECK intel engine online",
+    "45s RF: 4 networks mapped",
+    "120s LAN sweep started",
+    "380s HOST 192.168.1.100",
+    "400s Sweep done: 3 hosts"
+  ]
+}
