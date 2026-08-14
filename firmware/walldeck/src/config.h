@@ -35,9 +35,9 @@
 #define UI_TOOL_H 36
 #define UI_TAB_H 30
 
-#define MAX_ZONES 16
-#define MAX_DEVICES 48
-#define MAX_SCENES 24
+#define MAX_ZONES 8
+#define MAX_DEVICES 12
+#define MAX_SCENES 11
 #define UI_THEME_H 34
 #define LOG_LINES 4
 #define LOG_LINE_LEN 40

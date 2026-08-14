@@ -18,7 +18,11 @@ static void set_backlight(uint8_t level) {
   backlightLevel = level;
   displayAsleep = (level == 0);
   if (BACKLIGHT_PWM) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
     ledcWrite(BACKLIGHT_PIN, level);
+#else
+    ledcWrite(BACKLIGHT_LEDC_CH, level);
+#endif
   } else if (level == 0) {
     digitalWrite(BACKLIGHT_PIN, LOW);
   } else {
@@ -90,9 +94,14 @@ void power_init() {
 
   pinMode(BACKLIGHT_PIN, OUTPUT);
   if (BACKLIGHT_PWM) {
-    // Arduino-ESP32 3.x LEDC API (pin-based)
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
     ledcAttach(BACKLIGHT_PIN, 5000, 8);
     ledcWrite(BACKLIGHT_PIN, BACKLIGHT_BRIGHT);
+#else
+    ledcSetup(BACKLIGHT_LEDC_CH, 5000, 8);
+    ledcAttachPin(BACKLIGHT_PIN, BACKLIGHT_LEDC_CH);
+    ledcWrite(BACKLIGHT_LEDC_CH, BACKLIGHT_BRIGHT);
+#endif
   } else {
     digitalWrite(BACKLIGHT_PIN, HIGH);
   }

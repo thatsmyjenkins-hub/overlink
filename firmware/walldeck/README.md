@@ -38,7 +38,7 @@ Wi-Fi: join the house network via WallDeck setup / `wifi_config` (no hardcoded s
 
 ## Limits (2026-08)
 
-- `MAX_DEVICES 48`, `MAX_SCENES 24`, `MAX_ZONES 16`
+- Device catalog is RAM-capped (`MAX_DEVICES 12`) — CoreClient prefers groups/AV over every bulb. Fallback Core IP is `192.168.4.181`.
 - Core fallback IP: `192.168.4.181`
 - Touch map is still hardcoded in `main.cpp` (`touchscreen_read`) — recalibrate if your panel is off
 

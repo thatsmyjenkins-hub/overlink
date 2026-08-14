@@ -18,7 +18,11 @@ static bool otaBusy = false;
 
 static void otaBeginIfNeeded() {
   if (otaReady || WiFi.status() != WL_CONNECTED) return;
-  ArduinoOTA.setHostname("walldeck");
+  uint16_t chip = (uint16_t)(ESP.getEfuseMac() >> 32);
+  char host[20];
+  snprintf(host, sizeof(host), "walldeck-%04x", chip);
+  ArduinoOTA.setHostname(host);
+  Serial.printf("OTA hostname %s\n", host);
   ArduinoOTA.onStart([]() {
     otaBusy = true;
     power_network_activity();
