@@ -139,6 +139,10 @@ static void handleRemoteCommand(JsonObject cmd) {
     bool ok = deviceHubRunScene(cmd["sceneId"] | "", msg);
     result["ok"] = ok;
     result["message"] = msg;
+  } else if (!strcmp(op, "identify")) {
+    bool ok = deviceHubIdentify(cmd["deviceId"] | "", msg);
+    result["ok"] = ok;
+    result["message"] = msg;
   } else if (!strcmp(op, "ping")) {
     result["ok"] = true;
     result["message"] = "pong";
@@ -224,8 +228,26 @@ void relayClientLoop() {
 
   JsonDocument beat;
   beat["gridId"] = gridStoreActiveId();
+  beat["name"] = gridStoreActiveId();
   beat["ip"] = WiFi.localIP().toString();
   beat["rssi"] = WiFi.RSSI();
+  JsonObject catalog = beat["catalog"].to<JsonObject>();
+  JsonArray devices = catalog["devices"].to<JsonArray>();
+  deviceHubFillDevices(devices);
+  JsonArray scenes = catalog["scenes"].to<JsonArray>();
+  String sp = gridStorePath("scenes.json");
+  if (SD_MMC.exists(sp)) {
+    File f = SD_MMC.open(sp, "r");
+    JsonDocument sceneDoc;
+    if (f && !deserializeJson(sceneDoc, f)) {
+      for (JsonObject s : sceneDoc["scenes"].as<JsonArray>()) {
+        JsonObject o = scenes.add<JsonObject>();
+        o["id"] = s["id"] | "";
+        o["name"] = s["name"] | o["id"];
+      }
+    }
+    if (f) f.close();
+  }
   String body;
   serializeJson(beat, body);
   JsonDocument resp;

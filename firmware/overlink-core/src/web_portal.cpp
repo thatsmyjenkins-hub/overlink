@@ -519,6 +519,32 @@ void webPortalBegin() {
     String msg;
     sendJsonOk(relayClientSetEnabled(doc["enabled"] | false, msg), msg);
   });
+  server.on("/api/deck/vault", HTTP_POST, []() {
+    String dir = String("/homes/") + gridStoreActiveId() + "/vault";
+    if (!SD_MMC.exists("/homes")) SD_MMC.mkdir("/homes");
+    String homeDir = String("/homes/") + gridStoreActiveId();
+    if (!SD_MMC.exists(homeDir)) SD_MMC.mkdir(homeDir.c_str());
+    if (!SD_MMC.exists(dir)) SD_MMC.mkdir(dir.c_str());
+    File f = SD_MMC.open(dir + "/cyberdeck.json", FILE_WRITE);
+    if (!f) {
+      sendJsonOk(false, "vault write fail");
+      return;
+    }
+    f.print(server.arg("plain"));
+    f.close();
+    sendJsonOk(true, "cyberdeck vault saved");
+  });
+  server.on("/api/deck/vault", HTTP_GET, []() {
+    String p = String("/homes/") + gridStoreActiveId() + "/vault/cyberdeck.json";
+    if (!SD_MMC.exists(p)) {
+      server.send(404, "application/json", "{\"ok\":false,\"message\":\"empty\"}");
+      return;
+    }
+    File f = SD_MMC.open(p, "r");
+    String body = f.readString();
+    f.close();
+    server.send(200, "application/json", body);
+  });
   server.on("/api/party/status", HTTP_GET, []() {
     JsonDocument doc;
     JsonObject o = doc.to<JsonObject>();

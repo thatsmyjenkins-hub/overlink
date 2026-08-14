@@ -9,3 +9,4 @@ bool vaultAdd(const String &name, const String &kind, const String &payload,
 bool vaultDelete(int id, String &detail);
 bool vaultReplay(int id, String &detail);
 int vaultCount();
+void vaultExport(JsonDocument &doc);

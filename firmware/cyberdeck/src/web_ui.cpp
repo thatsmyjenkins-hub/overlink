@@ -4,6 +4,7 @@
 #include "vault.h"
 #include "wifi_net.h"
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <WebServer.h>
@@ -282,6 +283,38 @@ static void apiVaultList() {
   sendJson(200, doc);
 }
 
+static void apiVaultExport() {
+  JsonDocument doc;
+  vaultExport(doc);
+  sendJson(200, doc);
+}
+
+static void apiVaultPush() {
+  String core = "http://overlink.local";
+  if (server.hasArg("plain") && server.arg("plain").length()) {
+    JsonDocument body;
+    if (!deserializeJson(body, server.arg("plain")) && body["core"].is<const char *>()) {
+      core = body["core"].as<const char *>();
+    }
+  }
+  while (core.endsWith("/")) core.remove(core.length() - 1);
+  JsonDocument doc;
+  vaultExport(doc);
+  String payload;
+  serializeJson(doc, payload);
+  HTTPClient http;
+  http.setTimeout(5000);
+  if (!http.begin(core + "/api/deck/vault")) {
+    sendMsg(false, "cannot reach Core");
+    return;
+  }
+  http.addHeader("Content-Type", "application/json");
+  int code = http.POST(payload);
+  String resp = http.getString();
+  http.end();
+  sendMsg(code >= 200 && code < 300, String("push ") + code + " " + resp);
+}
+
 static void apiVaultAdd() {
   if (!server.hasArg("plain")) return sendMsg(false, "JSON body required");
   JsonDocument body;
@@ -460,6 +493,8 @@ void webBegin() {
   server.on("/api/rf/test", HTTP_POST, apiRfTest);
   server.on("/api/rf/watch", HTTP_POST, apiRfWatch);
   server.on("/api/vault", HTTP_GET, apiVaultList);
+  server.on("/api/vault/export", HTTP_GET, apiVaultExport);
+  server.on("/api/vault/push", HTTP_POST, apiVaultPush);
   server.on("/api/vault/add", HTTP_POST, apiVaultAdd);
   server.on("/api/vault/delete", HTTP_POST, apiVaultDel);
   server.on("/api/vault/replay", HTTP_POST, apiVaultReplay);

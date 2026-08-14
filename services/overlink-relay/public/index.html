@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OVERLINK Remote</title>
+  <style>
+    :root { --bg:#0A1210; --panel:#122018; --cyan:#3DDC97; --amber:#F0A030; --dim:#7A8F80; --text:#E8F5A0; }
+    * { box-sizing: border-box; }
+    body { margin:0; font: 15px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:var(--bg); color:var(--text); }
+    header { padding:1rem 1.25rem; border-bottom:1px solid var(--cyan); display:flex; justify-content:space-between; align-items:center; }
+    h1 { font-size:1rem; letter-spacing:.12em; margin:0; color:var(--cyan); }
+    main { max-width:720px; margin:0 auto; padding:1rem; }
+    label { display:block; color:var(--dim); font-size:.75rem; margin:.6rem 0 .25rem; }
+    input { width:100%; background:#07100e; border:1px solid var(--cyan); color:var(--cyan); padding:.5rem; font:inherit; }
+    button, .chip { background:var(--panel); color:var(--cyan); border:1px solid var(--cyan); padding:.45rem .7rem; font:inherit; cursor:pointer; }
+    button.on { background:var(--text); color:#0A1210; }
+    .row { display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:.5rem; }
+    .card { background:var(--panel); border:1px solid #1c3328; padding:.7rem; }
+    .card h3 { margin:0 0 .35rem; font-size:.85rem; }
+    .muted { color:var(--dim); font-size:.75rem; }
+    .ok { color:var(--cyan); }
+    .bad { color:#ff6b6b; }
+    #log { white-space:pre-wrap; color:var(--dim); font-size:.75rem; min-height:3rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>OVERLINK REMOTE</h1>
+    <span id="status" class="muted">offline</span>
+  </header>
+  <main>
+    <p class="muted">Dial-out control. Core must be enrolled + exposed. Uses admin secret only in this browser (not stored on the relay disk beyond the session you type).</p>
+    <label>Relay admin secret</label>
+    <input id="secret" type="password" autocomplete="off" />
+    <div class="row">
+      <button id="loadGrids">LOAD GRIDS</button>
+      <button id="connect">CONNECT</button>
+    </div>
+    <label>Grid</label>
+    <select id="grid" style="width:100%;background:#07100e;border:1px solid var(--cyan);color:var(--cyan);padding:.45rem;font:inherit"></select>
+    <h2 class="muted" style="margin-top:1.4rem">Scenes</h2>
+    <div id="scenes" class="grid"></div>
+    <h2 class="muted" style="margin-top:1.4rem">Devices</h2>
+    <div id="devices" class="grid"></div>
+    <pre id="log"></pre>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const log = (m) => { $("log").textContent = m; };
+    let ws = null;
+    let catalog = { devices: [], scenes: [] };
+
+    function render() {
+      $("scenes").innerHTML = (catalog.scenes || []).map(s =>
+        `<div class="card"><h3>${esc(s.name||s.id)}</h3><button data-scene="${esc(s.id)}">RUN</button></div>`
+      ).join("") || '<p class="muted">No scenes in last heartbeat.</p>';
+      $("devices").innerHTML = (catalog.devices || []).map(d =>
+        `<div class="card"><h3>${esc(d.name||d.id)}</h3><p class="muted">${esc(d.type||'')} ${d.online?'· online':''}</p>
+         <div class="row"><button data-dev="${esc(d.id)}" data-on="1">ON</button><button data-dev="${esc(d.id)}" data-on="0">OFF</button></div></div>`
+      ).join("") || '<p class="muted">No devices in last heartbeat.</p>';
+    }
+    function esc(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'&quot;',"'":'&#39;'}[c])); }
+
+    $("loadGrids").onclick = async () => {
+      const secret = $("secret").value.trim();
+      const r = await fetch('/v1/admin/grids?secret=' + encodeURIComponent(secret));
+      const d = await r.json();
+      if (!d.ok) { log('load failed'); return; }
+      $("grid").innerHTML = (d.grids||[]).map(g =>
+        `<option value="${esc(g.id)}">${esc(g.name||g.id)} ${g.online?'(online)':'(offline)'}</option>`
+      ).join("");
+      log((d.grids||[]).length + ' grid(s)');
+    };
+
+    $("connect").onclick = async () => {
+      const secret = $("secret").value.trim();
+      const gridId = $("grid").value;
+      if (!gridId) { log('pick a grid'); return; }
+      const r = await fetch('/v1/session', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ gridId, secret })
+      });
+      const d = await r.json();
+      if (!d.ok) { log(d.message || 'session fail'); $("status").textContent='offline'; return; }
+      catalog = d.catalog || catalog;
+      render();
+      if (ws) ws.close();
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}${d.wsPath}`);
+      ws.onopen = () => { $("status").textContent = 'connected'; $("status").className='ok'; };
+      ws.onclose = () => { $("status").textContent = 'offline'; $("status").className='bad'; };
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'hello' && msg.catalog) { catalog = msg.catalog; render(); }
+        if (msg.type === 'result') log(JSON.stringify(msg.result));
+        if (msg.type === 'queued') log('queued ' + msg.id);
+      };
+    };
+
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!ws || ws.readyState !== 1) return;
+      if (t.dataset.scene) ws.send(JSON.stringify({ type:'command', op:'scene.run', sceneId: t.dataset.scene }));
+      if (t.dataset.dev) ws.send(JSON.stringify({ type:'command', op:'device.set', deviceId: t.dataset.dev, on: t.dataset.on === '1' }));
+    });
+    render();
+  </script>
+</body>
+</html>

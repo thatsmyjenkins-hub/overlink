@@ -138,3 +138,11 @@ bool vaultReplay(int id, String &detail) {
 }
 
 int vaultCount() { return count; }
+
+void vaultExport(JsonDocument &doc) {
+  doc["ok"] = true;
+  doc["source"] = "cyberdeck";
+  doc["nextId"] = nextId;
+  JsonArray arr = doc["items"].to<JsonArray>();
+  vaultList(arr);
+}

@@ -4,7 +4,7 @@
 
 // Overlink Core — WallDeck is a thin client (no direct WiZ/WLED/Deck I/O)
 #define CORE_HOSTNAME "overlink"
-#define CORE_FALLBACK_IP "192.168.4.55"
+#define CORE_FALLBACK_IP "192.168.4.181"
 #define CORE_PORT 80
 #define CORE_POLL_MS 4000UL
 #define CORE_OFFLINE_FAILS 2
@@ -35,9 +35,9 @@
 #define UI_TOOL_H 36
 #define UI_TAB_H 30
 
-#define MAX_ZONES 8
-#define MAX_DEVICES 12
-#define MAX_SCENES 11
+#define MAX_ZONES 16
+#define MAX_DEVICES 48
+#define MAX_SCENES 24
 #define UI_THEME_H 34
 #define LOG_LINES 4
 #define LOG_LINE_LEN 40
