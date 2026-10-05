@@ -11,60 +11,102 @@ static const char PORTAL_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 <style>
 :root{
   --bg:#0A1210;--panel:#122018;--cyan:#3DDC97;--amber:#F0A030;
-  --dim:#7A8F80;--active:#E8F5A0;--text:#E8F5A0;
+  --dim:#7A8F80;--active:#E8F5A0;--text:#E8F5A0;--ink:#07100e;
   --font:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--cyan);font-family:var(--font)}
-body{padding:0 0 3.5rem}
-header{display:flex;justify-content:space-between;align-items:center;padding:.7rem .8rem;border-bottom:1px solid var(--cyan)}
-header h1{margin:0;font-size:.95rem;letter-spacing:.08em;font-weight:600;color:var(--cyan)}
-#wifi{color:var(--active);font-size:.8rem}
-main{padding:.65rem .7rem;max-width:28rem;margin:0 auto}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:.35rem}
+body{
+  padding:0 0 4.4rem;
+  background-image:
+    linear-gradient(rgba(61,220,151,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(61,220,151,.05) 1px,transparent 1px);
+  background-size:22px 22px;background-attachment:fixed;
+}
+header{
+  display:flex;justify-content:space-between;align-items:center;gap:.55rem;
+  padding:.62rem .75rem .55rem;border-bottom:1px solid var(--cyan);
+  background:var(--ink);position:sticky;top:0;z-index:4;
+}
+.brand{min-width:0}
+.eyebrow{margin:0 0 .1rem;color:var(--amber);font-size:.62rem;letter-spacing:.18em}
+header h1{margin:0;font-size:1.02rem;letter-spacing:.14em;font-weight:650;color:var(--cyan)}
+.head-right{display:flex;align-items:center;gap:.35rem;flex-shrink:0}
+#wifi{
+  color:var(--active);font-size:.66rem;letter-spacing:.08em;
+  border:1px solid var(--cyan);border-radius:3px;padding:.28rem .38rem;background:var(--panel)
+}
+a.mission{
+  color:var(--amber);text-decoration:none;font-size:.66rem;letter-spacing:.08em;
+  border:1px solid var(--amber);border-radius:3px;padding:.28rem .4rem
+}
+main{padding:.7rem .75rem 1rem;max-width:28rem;margin:0 auto}
+.lede{color:var(--dim);font-size:.75rem;line-height:1.45;margin:0 0 .55rem}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:.35rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
 button.tile{
   appearance:none;background:var(--panel);color:var(--cyan);
-  border:1px solid var(--cyan);border-radius:3px;padding:.85rem .4rem;
-  font:inherit;letter-spacing:.06em;text-transform:uppercase;cursor:pointer
+  border:1px solid var(--cyan);border-radius:4px;padding:.95rem .4rem;min-height:3.15rem;
+  font:inherit;letter-spacing:.08em;text-transform:uppercase;cursor:pointer
 }
 button.tile.accent{border-color:var(--amber);color:var(--amber)}
 button.tile.active{background:var(--active);color:var(--bg);border-color:var(--cyan)}
 button.tile.danger{border-color:var(--amber);color:var(--amber)}
-.now{margin-top:.65rem;border:1px solid var(--cyan);border-radius:3px;background:var(--panel);padding:.55rem}
-.now-top{display:flex;justify-content:space-between;margin-bottom:.45rem}
-.now-top strong{color:var(--active);font-size:.85rem}
-.now-top span{color:var(--amber);font-size:.8rem}
-.row{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.35rem}
-button.chip{
+.now{margin-top:.65rem;border:1px solid var(--cyan);border-radius:4px;background:var(--panel);padding:.6rem}
+.now-top{display:flex;justify-content:space-between;align-items:baseline;gap:.4rem;margin-bottom:.45rem}
+.now-top strong{color:var(--active);font-size:.85rem;letter-spacing:.06em}
+.now-top span{color:var(--amber);font-size:.75rem;letter-spacing:.06em}
+.row{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem}
+button.chip,a.chip{
   appearance:none;background:var(--panel);color:var(--cyan);
-  border:1px solid var(--cyan);border-radius:3px;padding:.55rem .45rem;
-  font:inherit;font-size:.75rem;letter-spacing:.04em;cursor:pointer;flex:1;min-width:3.2rem
+  border:1px solid var(--cyan);border-radius:4px;padding:.58rem .45rem;
+  font:inherit;font-size:.75rem;letter-spacing:.05em;cursor:pointer;flex:1;min-width:3.2rem;text-align:center
 }
-button.chip:hover{box-shadow:0 0 10px rgba(61,220,151,.25)}
-button.chip.on{background:var(--active);color:var(--bg)}
-.vol{color:var(--active);min-width:2rem;text-align:center;align-self:center}
-.feed{margin-top:.5rem;color:var(--cyan);font-size:.75rem;min-height:1.2rem}
-.item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--cyan);
-  border-radius:3px;padding:.55rem .6rem;margin-top:.35rem;background:var(--panel)}
-.muted{color:var(--dim);font-size:.75rem}
+button.chip.on,a.chip.on{background:var(--active);color:var(--bg);border-color:var(--active)}
+.vol{color:var(--active);min-width:2rem;text-align:center;align-self:center;letter-spacing:.08em}
+.feed{
+  margin-top:.55rem;color:var(--cyan);font-size:.75rem;min-height:1.2rem;letter-spacing:.04em;
+  border-top:1px solid rgba(61,220,151,.35);padding-top:.4rem
+}
+.item{
+  display:flex;justify-content:space-between;align-items:center;gap:.5rem;
+  border:1px solid var(--cyan);border-radius:4px;padding:.6rem .65rem;margin-top:.35rem;background:var(--panel)
+}
+.muted{color:var(--dim);font-size:.75rem;line-height:1.4}
 .kv{display:grid;grid-template-columns:5rem 1fr;gap:.25rem .5rem;font-size:.8rem}
 .kv .muted{font-size:.75rem}
-.stat{border:1px solid var(--cyan);border-radius:3px;padding:.55rem;background:var(--panel);margin-top:.35rem}
-.stat strong{color:var(--active);display:block;font-size:1.1rem}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;border-top:1px solid var(--cyan);background:#07100e}
-nav button{flex:1;appearance:none;background:transparent;border:0;color:var(--dim);padding:.85rem .2rem;font:inherit;font-size:.65rem;letter-spacing:.06em;cursor:pointer}
-nav button.active{color:var(--cyan)}
-.toast{position:fixed;left:.7rem;right:.7rem;bottom:3.6rem;background:var(--panel);border:1px solid var(--cyan);
-  color:var(--active);padding:.65rem .8rem;display:none;z-index:5}
+.stat{border:1px solid var(--cyan);border-radius:4px;padding:.55rem .6rem;background:var(--panel)}
+.stat.wide{grid-column:1 / -1}
+.stat strong{color:var(--active);display:block;font-size:1.15rem;letter-spacing:.04em;margin-top:.12rem}
+nav{
+  position:fixed;left:0;right:0;bottom:0;display:flex;border-top:1px solid var(--cyan);
+  background:#07100e;padding-bottom:env(safe-area-inset-bottom)
+}
+nav button{
+  flex:1;appearance:none;background:transparent;border:0;border-top:2px solid transparent;
+  color:var(--dim);padding:.72rem .12rem .68rem;font:inherit;font-size:.62rem;letter-spacing:.08em;cursor:pointer
+}
+nav button.active{color:var(--cyan);border-top-color:var(--cyan)}
+.toast{
+  position:fixed;left:.7rem;right:.7rem;bottom:4.5rem;background:var(--panel);
+  border:1px solid var(--cyan);border-radius:4px;color:var(--active);padding:.65rem .8rem;display:none;z-index:5
+}
 .toast.show{display:block}
 .hidden{display:none!important}
-h2{margin:.4rem 0;font-size:.85rem;color:var(--amber);letter-spacing:.08em}
+h2{margin:.15rem 0 .35rem;font-size:.78rem;color:var(--amber);letter-spacing:.16em;font-weight:600}
+button:focus-visible,a:focus-visible{outline:1px solid var(--amber);outline-offset:2px}
 </style>
 </head>
 <body>
 <header>
-  <h1 id="hdr">OVERLINK</h1>
-  <div id="wifi">WIFI --</div>
+  <div class="brand">
+    <p class="eyebrow">HOUSE BRAIN</p>
+    <h1 id="hdr">OVERLINK</h1>
+  </div>
+  <div class="head-right">
+    <a class="mission" href="http://Aarons-MacBook-Air.local:8765/overlink">MISSION</a>
+    <div id="wifi">WIFI --</div>
+  </div>
 </header>
 <main id="app"></main>
 <nav id="nav">
@@ -107,7 +149,17 @@ let state={
 };
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(path,opts){const r=await fetch(path,opts);const t=await r.text();let j;try{j=JSON.parse(t)}catch{j={raw:t}} if(!r.ok) throw new Error(j.error||j.message||t); return j}
+async function api(path,opts){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),8000);
+  try{
+    const r=await fetch(path,{...opts,signal:ctrl.signal});
+    const txt=await r.text();
+    let j;try{j=JSON.parse(txt)}catch{j={raw:txt}}
+    if(!r.ok) throw new Error(j.error||j.message||txt);
+    return j;
+  }finally{clearTimeout(t)}
+}
 async function post(path,body){return api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})}
 
 async function runScene(id,confirm){
@@ -248,14 +300,24 @@ function renderDash(){
   const scene=sum.lastSceneTag||'—';
   const hasDeck=(state.devices||[]).some(d=>d.type==='cyberdeck');
   const deck=sum.deckOnline?'UP':'DARK';
+  const zones=(state.zones||[]).slice(0,8);
+  const zoneBtns=zones.map(z=>`<button class="chip" data-goto-zone="${esc(z.id)}">${esc((z.name||z.id).toUpperCase())}</button>`).join('')
+    ||`<button class="chip" data-goto-zone="basement">BASEMENT</button>`;
   return `<h2>HOME</h2>
-  <div class="stat"><span class="muted">devices</span><strong>${online}/${total} ONLINE</strong></div>
-  <div class="stat"><span class="muted">recent scene</span><strong>${esc(scene)}</strong></div>
-  ${hasDeck?`<div class="stat"><span class="muted">cyberdeck</span><strong>${deck}</strong></div>`:''}
-  <div class="stat"><span class="muted">link</span><strong>${esc(state.wifi.staSsid||'—')}</strong>
-    <div class="muted">${esc(state.wifi.staIp||'')}</div></div>
-  <div class="row" style="margin-top:.6rem;flex-wrap:wrap">
-    ${(state.zones||[]).slice(0,6).map(z=>`<button class="chip" data-goto-zone="${esc(z.id)}">${esc((z.name||z.id).toUpperCase())} ></button>`).join('')||`<button class="chip" data-goto-zone="basement">BASEMENT CTRL ></button>`}
+  <p class="lede">The house brain. Rooms, scenes, and the basement deck live on this phone. Mission is the same house, from the desk.</p>
+  <div class="stats">
+    <div class="stat"><span class="muted">DEVICES</span><strong>${online}/${total}</strong></div>
+    <div class="stat"><span class="muted">LAST SCENE</span><strong>${esc(scene)}</strong></div>
+    ${hasDeck?`<div class="stat"><span class="muted">CYBERDECK</span><strong>${deck}</strong></div>`:''}
+    <div class="stat ${hasDeck?'':'wide'}"><span class="muted">LINK</span><strong>${esc(state.wifi.staSsid||'—')}</strong>
+      <div class="muted">${esc(state.wifi.staIp||'waiting for the LAN')}</div></div>
+  </div>
+  <h2 style="margin-top:.75rem">ROOMS</h2>
+  <div class="row">${zoneBtns}</div>
+  <div class="row">
+    <button class="chip" data-tabjump="scenes">SCENES</button>
+    <button class="chip" data-goto-zone="basement">BASEMENT CTRL</button>
+    <button class="chip" data-tabjump="games">GAMES</button>
   </div>
   <div class="feed">${esc(state.feed)}</div>`;
 }
@@ -730,6 +792,9 @@ function bind(){
     if(b.dataset.ops) state.opsPanel=b.dataset.ops;
     if(b.dataset.clearZone){ state.zone=''; saveZone(''); }
     saveTab(state.tab); render();
+    if(state.tab==='ops') refreshOpsData();
+    if(state.tab==='home') refreshSummary();
+    if(state.tab==='scenes') refreshScenes().then(()=>{if(state.tab==='scenes')render()});
   });
   document.querySelectorAll('[data-ops]').forEach(b=>b.onclick=()=>{state.opsPanel=b.dataset.ops;render()});
   document.querySelectorAll('[data-auto]').forEach(b=>b.onclick=async()=>{
@@ -924,6 +989,8 @@ function render(){
   $('#wifi').style.color=state.wifi.sta?'var(--active)':'var(--amber)';
   const zname=state.zone?zoneMeta(state.zone).name:'';
   $('#hdr').textContent=arrival?'ARRIVAL':(state.tab==='zones'&&state.zone?(state.zone==='basement'?'BASEMENT CTRL':(zname.toUpperCase()+' CTRL')):'OVERLINK');
+  const eye=document.querySelector('.eyebrow');
+  if(eye) eye.textContent=arrival?'NEW HOME':(setup?'SETUP':(state.tab==='zones'&&state.zone?'ZONE':'HOUSE BRAIN'));
   const app=$('#app');
   if(setup){app.innerHTML=renderSetup();bind();loadScan();return}
   if(arrival){app.innerHTML=renderArrival();bind();return}
@@ -975,6 +1042,7 @@ async function refreshParty(){try{state.party=await api('/api/party/status')}cat
 async function refreshOpsData(){await Promise.all([refreshDevices(),refreshAutos(),refreshGrids(),refreshEye(),refreshConnectors(),refreshRelay(),refreshParty()])}
 async function boot(){
   try{const s=await api('/api/status');state.wifi=s.wifi||{}}catch{ $('#app').innerHTML='<div class="muted">CORE UNREACHABLE</div>'; return }
+  render();
   if(state.wifi.sta){
     await refreshDevices();
     await refreshZones();
@@ -983,14 +1051,11 @@ async function boot(){
     try{
       const a=await api('/api/arrival');
       state.arrival=!!a.pending;
-      if(state.arrival){
-        state.arrivalStep='scan';
-        try{state.discover=await api('/api/discover/devices')}catch{state.discover={suggestions:[]}}
-      }
+      if(state.arrival) state.arrivalStep='scan';
     }catch{state.arrival=false}
     if(state.tab==='ops') await refreshOpsData();
+    render();
   }
-  render();
 }
 boot();
 setInterval(()=>{if(state.wifi.sta&&!state.forceSetup){refreshDevices();if(state.tab==='home')refreshSummary()}},12000);

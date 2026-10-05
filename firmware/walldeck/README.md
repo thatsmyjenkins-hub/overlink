@@ -11,10 +11,9 @@ Legacy direct-bulb firmware lives in `legacy/` and is not built.
 | Tab | Role |
 |-----|------|
 | **Home** | Status: Core online, last scene, deck peer |
-| **Zones** | Devices in the active zone (on/off, dim) |
+| **Zones** | Zone list, then Basement CTRL or a room |
 | **Scenes** | Home-scoped scenes from Core |
-| **Now / AV** | Fire / Vizio / Sony via Core |
-| **Settings** | Power / sleep (deep sleep default **off** so OTA works) |
+| **Devices** | Paged catalog (12 at a time), Core IP, touch cal, sleep |
 
 Ops (connectors, relay enroll, arrival) stays on the **phone** Core portal — not on the wall.
 
@@ -36,19 +35,20 @@ pio run -e cyd_ota -t upload   # upload_port = walldeck.local
 
 Wi-Fi: join the house network via WallDeck setup / `wifi_config` (no hardcoded secrets in git).
 
-## Limits (2026-08)
+## Limits
 
-- Device catalog is RAM-capped (`MAX_DEVICES 12`) — CoreClient prefers groups/AV over every bulb. Fallback Core IP is `192.168.4.181`.
-- Core fallback IP: `192.168.4.181`
-- Touch map is still hardcoded in `main.cpp` (`touchscreen_read`) — recalibrate if your panel is off
+- Device RAM cap is still `MAX_DEVICES 12` / `MAX_SCENES 11` / `MAX_ZONES 8` (ESP32 DRAM). Devices → ZONE / PREV / NEXT walks the rest of the house, including every Hue light. A 48/24 image was tried and reverted the same day; do not re-OTA that build.
+- Core is `overlink.local`, then the address saved on Devices → CORE, then `192.168.4.181`.
+- Touch starts from the factory map (raw 200,3700 × 240,3800). Devices → CAL stores a new top-left / bottom-right pair in NVS.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| No devices / “Core offline” | Ping `overlink.local`. Confirm Core at `.181`. Check WallDeck and Core on same 2.4 GHz LAN. |
-| Missing tiles | Device/scene count exceeded old cap of 12 — this build is 48/24. Re-OTA. |
-| OTA fails | Disable deep sleep. `ping walldeck.local`. Hold BOOT only for USB recovery. |
+| No devices / “Core offline” | Ping `overlink.local`. On the wall, Devices → CORE and enter the Core IP. Same 2.4 GHz LAN. |
+| Missing lights | Open Devices and press NEXT, or ZONE to switch `basement` / `home`. The wall only holds 12 devices at a time. |
+| Touch is offset | Devices → CAL. Tap the top-left corner, then the bottom-right corner. |
+| OTA fails | Deep sleep stays off unless Devices turns it on. `ping walldeck-<chip>.local`. Hold BOOT only for USB recovery. |
 | Blank display | Wrong driver — ILI9341 vs ST7789 in `platformio.ini`. |
 
 ## Project structure

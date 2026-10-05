@@ -10,10 +10,10 @@ struct CoreZone {
 };
 
 struct CoreDevice {
-  char id[24];
+  char id[20];
   char zoneId[14];
-  char type[12];
-  char name[24];
+  char type[10];
+  char name[20];
   bool online;
 };
 
@@ -45,6 +45,21 @@ class CoreClient {
 
   size_t deviceCount() const { return deviceCount_; }
   const CoreDevice &device(size_t i) const { return devices_[i]; }
+
+  // 12-slot window. Empty zone id pages the whole catalog.
+  void setDeviceWindow(const char *zoneId, int page);
+  void cycleDeviceZone();
+  int devicePage() const { return devicePage_; }
+  int devicePages() const {
+    if (deviceTotal_ <= 0) return 1;
+    return (deviceTotal_ + MAX_DEVICES - 1) / MAX_DEVICES;
+  }
+  int deviceTotal() const { return deviceTotal_; }
+  const char *deviceZone() const { return deviceZone_; }
+
+  // Saved Core address used when overlink.local does not answer.
+  bool setCoreHost(const char *ip);
+  const char *coreHost() const { return coreHost_; }
 
   size_t sceneCount() const { return sceneCount_; }
   const CoreScene &scene(size_t i) const { return scenes_[i]; }
@@ -97,8 +112,15 @@ class CoreClient {
   bool httpPost(const String &path, const String &json, String &body, int timeoutMs = 4000);
   bool refreshCatalog();
   bool refreshDevices();
+  bool tryStatus(const IPAddress &ip);
 
   IPAddress coreIp_;
+  IPAddress savedIp_;
+  bool hasSavedIp_ = false;
+  char coreHost_[16] = "";
+  char deviceZone_[14] = "";
+  int devicePage_ = 0;
+  int deviceTotal_ = 0;
   bool coreOnline_ = false;
   uint8_t failStreak_ = 0;
   unsigned long lastPollMs_ = 0;

@@ -5,13 +5,18 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <math.h>
+#include <mdns.h>
 
 #include "av_ctrl.h"
 #include "av_secrets.h"
 #include "grid_store.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 
-static const int kMaxDev = 48;
+static const int kMaxDev = 72;
 static const uint16_t WIZ_PORT = 38899;
+static const uint32_t kProbeMs = 100;
 
 struct Dev {
   String id;
@@ -32,9 +37,28 @@ struct Dev {
 static Dev devices[kMaxDev];
 static int deviceCount = 0;
 static WiFiUDP wizUdp;
-static uint32_t lastProbeMs = 0;
 static char lastSceneIdBuf[24] = "";
 static char lastSceneTagBuf[16] = "";
+static SemaphoreHandle_t hubMu = nullptr;
+static TaskHandle_t hubTaskHandle = nullptr;
+static volatile int burstLeft = 0;
+static int probeIdx = 0;
+
+static void hubLock() {
+  if (!hubMu) hubMu = xSemaphoreCreateMutex();
+  if (hubMu) xSemaphoreTake(hubMu, portMAX_DELAY);
+}
+static void hubUnlock() {
+  if (hubMu) xSemaphoreGive(hubMu);
+}
+
+static bool ipOnStaSubnet(const IPAddress &ip) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+  if (ip == INADDR_NONE) return false;
+  IPAddress self = WiFi.localIP();
+  IPAddress mask = WiFi.subnetMask();
+  return (self & mask) == (ip & mask);
+}
 
 static IPAddress parseIp(const char *s) {
   IPAddress ip;
@@ -42,10 +66,11 @@ static IPAddress parseIp(const char *s) {
   return ip;
 }
 
-static bool httpGetOk(const String &url, int timeoutMs = 1200) {
+static bool httpGetOk(const String &url, int timeoutMs = 120) {
   WiFiClient client;
   HTTPClient http;
   http.setTimeout(timeoutMs);
+  http.setConnectTimeout(timeoutMs);
   if (!http.begin(client, url)) return false;
   int code = http.GET();
   http.end();
@@ -75,7 +100,7 @@ static bool httpPutJson(const String &url, const String &json) {
   return code > 0 && code < 400;
 }
 
-static bool tcpProbe(const IPAddress &ip, uint16_t port, uint32_t timeoutMs = 400) {
+static bool tcpProbe(const IPAddress &ip, uint16_t port, uint32_t timeoutMs = 100) {
   if (ip == INADDR_NONE || !port) return false;
   WiFiClient c;
   return c.connect(ip, port, timeoutMs);
@@ -209,10 +234,13 @@ static bool hueSetEffect(const char *lightId, const char *effect) {
 }
 
 static void hueRefreshOnline() {
+  IPAddress hip = parseIp(hueIp());
+  if (!ipOnStaSubnet(hip)) return;
   auto fetchJson = [](const String &url, JsonDocument &doc) -> bool {
     WiFiClient client;
     HTTPClient http;
-    http.setTimeout(4000);
+    http.setTimeout(800);
+    http.setConnectTimeout(800);
     if (!http.begin(client, url)) return false;
     int code = http.GET();
     if (code != 200) {
@@ -231,6 +259,7 @@ static void hueRefreshOnline() {
   bool groupsOk =
       fetchJson(String("http://") + hueIp() + "/api/" + hueUser() + "/groups", groups);
 
+  hubLock();
   for (int i = 0; i < deviceCount; i++) {
     if (devices[i].type == "hue") {
       if (!lightsOk) {
@@ -248,11 +277,11 @@ static void hueRefreshOnline() {
       }
       const char *gid = devices[i].hueId.c_str();
       JsonObject G = groups[gid].as<JsonObject>();
-      // Group "any_on" / reachable via any light
       devices[i].online = !G.isNull();
       devices[i].ip = parseIp(hueIp());
     }
   }
+  hubUnlock();
 }
 
 static void hueAll(bool on) {
@@ -337,7 +366,7 @@ static void wizDiscoverByMac() {
   wizSendRegistrationBroadcast();
 
   uint32_t t0 = millis();
-  while (millis() - t0 < 1200) {
+  while (millis() - t0 < 400) {
     int n = wizUdp.parsePacket();
     if (n <= 0) {
       delay(10);
@@ -352,6 +381,7 @@ static void wizDiscoverByMac() {
     const char *mac = resp["result"]["mac"] | "";
     if (!mac[0]) continue;
     IPAddress rip = wizUdp.remoteIP();
+    hubLock();
     for (int i = 0; i < deviceCount; i++) {
       if (devices[i].type != "wiz_bulb") continue;
       if (!macEquals(devices[i].mac.c_str(), mac)) continue;
@@ -360,16 +390,17 @@ static void wizDiscoverByMac() {
       Serial.printf("[HUB] WiZ %s → %s\n", devices[i].name.c_str(),
                     rip.toString().c_str());
     }
+    hubUnlock();
   }
 }
 
-static bool wizProbe(const IPAddress &ip) {
+static bool wizProbe(const IPAddress &ip, uint32_t timeoutMs = 120) {
   if (ip == INADDR_NONE) return false;
   JsonDocument doc;
   doc["method"] = "getPilot";
   wizSend(ip, doc);
   uint32_t t0 = millis();
-  while (millis() - t0 < 500) {
+  while (millis() - t0 < timeoutMs) {
     int n = wizUdp.parsePacket();
     if (n > 0) {
       char buf[256];
@@ -440,7 +471,6 @@ static bool reloadAfterWrite(String &message) {
     message = "reload fail";
     return false;
   }
-  deviceHubRefreshOnline();
   message = String("devices=") + deviceCount;
   return true;
 }
@@ -889,7 +919,7 @@ static bool registeredMac(const char *mac) {
 static void wizSuggestDiscover(JsonArray sug) {
   wizSendRegistrationBroadcast();
   uint32_t t0 = millis();
-  while (millis() - t0 < 900) {
+  while (millis() - t0 < 400) {
     int n = wizUdp.parsePacket();
     if (n <= 0) {
       delay(10);
@@ -1003,6 +1033,32 @@ static void fingerprintHost(JsonArray sug, const IPAddress &ip) {
   }
 }
 
+static void mdnsSuggestService(JsonArray sug, const char *svc, const char *proto, const char *type,
+                               uint16_t fallbackPort, const char *why) {
+  mdns_result_t *results = nullptr;
+  if (mdns_query_ptr(svc, proto, 350, 12, &results) != ESP_OK || !results) return;
+  for (mdns_result_t *r = results; r; r = r->next) {
+    IPAddress ip;
+    bool have = false;
+    for (mdns_ip_addr_t *a = r->addr; a; a = a->next) {
+      if (a->addr.type == ESP_IPADDR_TYPE_V4) {
+        ip = IPAddress(a->addr.u_addr.ip4.addr);
+        have = true;
+        break;
+      }
+    }
+    if (!have || ip == INADDR_NONE) continue;
+    char ips[20];
+    snprintf(ips, sizeof(ips), "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+    const char *nm = r->instance_name && r->instance_name[0] ? r->instance_name
+                     : (r->hostname && r->hostname[0] ? r->hostname : type);
+    uint16_t port = r->port ? r->port : fallbackPort;
+    String id = String(type) + "-" + String(ip[3]);
+    suggestOne(sug, id.c_str(), type, nm, ips, port, why);
+  }
+  mdns_query_results_free(results);
+}
+
 void deviceHubFillDiscover(JsonObject out) {
   out["ok"] = true;
   out["deviceCount"] = deviceCount;
@@ -1017,33 +1073,17 @@ void deviceHubFillDiscover(JsonObject out) {
   out["subnet"] = self.toString() + "/24";
 
   wizSuggestDiscover(sug);
-
-  int probed = 0;
-  const int kMaxHosts = 64;
-  // Prefer nearby hosts first, then wrap the /24
-  auto consider = [&](uint8_t last) {
-    if (probed >= kMaxHosts) return;
-    if (last == 0 || last == 255 || last == self[3]) return;
-    IPAddress ip(self[0], self[1], self[2], last);
-    probed++;
-    if (!(tcpProbe(ip, 80, 30) || tcpProbe(ip, 8008, 25) || tcpProbe(ip, 554, 20) ||
-          tcpProbe(ip, 7345, 20) || tcpProbe(ip, 5555, 20)))
-      return;
-    fingerprintHost(sug, ip);
-  };
-  for (int d = 1; d < 255 && probed < kMaxHosts; d++) {
-    int up = (int)self[3] + d;
-    int dn = (int)self[3] - d;
-    if (up < 255) consider((uint8_t)up);
-    if (dn > 0) consider((uint8_t)dn);
-  }
-  out["probed"] = probed;
+  mdnsSuggestService(sug, "_googlecast", "_tcp", "cast", 8008, "mdns googlecast");
+  mdnsSuggestService(sug, "_hue", "_tcp", "hue_bridge", 80, "mdns hue");
+  mdnsSuggestService(sug, "_wled", "_tcp", "wled", 80, "mdns wled");
+  out["probed"] = 0;
 
   loadHueCreds();
-  if (gHueUser.length() && gHueIp.length()) {
+  IPAddress hip = parseIp(hueIp());
+  if (gHueUser.length() && gHueIp.length() && ipOnStaSubnet(hip)) {
     String body;
     String url = String("http://") + hueIp() + "/api/" + hueUser() + "/groups";
-    if (httpGetBody(url, 3500, body)) {
+    if (httpGetBody(url, 800, body)) {
       JsonDocument gdoc;
       if (!deserializeJson(gdoc, body)) {
         for (JsonPair kv : gdoc.as<JsonObject>()) {
@@ -1132,167 +1172,184 @@ bool deviceHubHuePair(const char *bridgeIp, String &message) {
 }
 
 bool deviceHubLoadFromSd() {
-  deviceCount = 0;
-  String path = gridStorePath("devices.json");
-  if (!SD_MMC.exists(path)) return false;
-  File f = SD_MMC.open(path, "r");
-  if (!f) return false;
   JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, f);
-  f.close();
-  if (err) return false;
-  JsonArray arr = doc["devices"].as<JsonArray>();
-  for (JsonObject o : arr) {
-    if (deviceCount >= kMaxDev) break;
-    Dev &d = devices[deviceCount++];
-    d.id = o["id"] | "";
-    d.zoneId = o["zoneId"] | "";
-    d.type = o["type"] | "";
-    d.name = o["name"] | "";
-    d.mac = o["mac"] | "";
-    d.hostname = o["hostname"] | "";
-    d.hueId = o["hueId"] | "";
-    d.entityId = o["entityId"] | "";
-    d.connector = o["connector"] | "";
-    d.snapshotPath = o["snapshotPath"] | "";
-    d.port = o["port"] | 80;
-    const char *fb = o["fallbackIp"] | "";
-    d.ip = parseIp(fb);
-    d.online = false;
-    // Convenience: hue-29 / hue_group-6 → hueId
-    if (!d.hueId.length()) {
-      if (d.type == "hue" && d.id.startsWith("hue-")) d.hueId = d.id.substring(4);
-      if (d.type == "hue_group" && d.id.startsWith("hue_group-"))
-        d.hueId = d.id.substring(10);
+  bool have = false;
+  String path = gridStorePath("devices.json");
+  if (SD_MMC.exists(path)) {
+    File f = SD_MMC.open(path, "r");
+    if (f) {
+      have = !deserializeJson(doc, f);
+      f.close();
     }
   }
-  // Migrate known WLED IP if SD still has the old subnet address
-  for (int i = 0; i < deviceCount; i++) {
-    if (devices[i].id == "wled-basement" &&
-        devices[i].ip.toString() == "192.168.5.162") {
-      devices[i].ip = IPAddress(192, 168, 4, 39);
-      Serial.println("[HUB] migrated WLED → 192.168.4.39");
+
+  hubLock();
+  deviceCount = 0;
+  probeIdx = 0;
+  if (have) {
+    JsonArray arr = doc["devices"].as<JsonArray>();
+    for (JsonObject o : arr) {
+      if (deviceCount >= kMaxDev) break;
+      Dev &d = devices[deviceCount++];
+      d.id = o["id"] | "";
+      d.zoneId = o["zoneId"] | "";
+      d.type = o["type"] | "";
+      d.name = o["name"] | "";
+      d.mac = o["mac"] | "";
+      d.hostname = o["hostname"] | "";
+      d.hueId = o["hueId"] | "";
+      d.entityId = o["entityId"] | "";
+      d.connector = o["connector"] | "";
+      d.snapshotPath = o["snapshotPath"] | "";
+      d.port = o["port"] | 80;
+      const char *fb = o["fallbackIp"] | "";
+      d.ip = parseIp(fb);
+      d.online = false;
+      if (!d.hueId.length()) {
+        if (d.type == "hue" && d.id.startsWith("hue-")) d.hueId = d.id.substring(4);
+        if (d.type == "hue_group" && d.id.startsWith("hue_group-"))
+          d.hueId = d.id.substring(10);
+      }
     }
-    // CyberDeck drifted off .156 → prefer .50 seed
-    if (devices[i].id == "cyberdeck-basement" &&
-        devices[i].ip.toString() == "192.168.4.156") {
-      devices[i].ip = IPAddress(192, 168, 4, 50);
-      Serial.println("[HUB] migrated CyberDeck → 192.168.4.50");
+    for (int i = 0; i < deviceCount; i++) {
+      if (devices[i].id == "wled-basement" &&
+          devices[i].ip.toString() == "192.168.5.162") {
+        devices[i].ip = IPAddress(192, 168, 4, 39);
+        Serial.println("[HUB] migrated WLED → 192.168.4.39");
+      }
+      if (devices[i].id == "cyberdeck-basement" &&
+          devices[i].ip.toString() == "192.168.4.156") {
+        devices[i].ip = IPAddress(192, 168, 4, 50);
+        Serial.println("[HUB] migrated CyberDeck → 192.168.4.50");
+      }
     }
   }
-  Serial.printf("[HUB] loaded %d devices from TF\n", deviceCount);
-  return deviceCount > 0;
+  int n = deviceCount;
+  hubUnlock();
+  Serial.printf("[HUB] loaded %d devices from TF\n", n);
+  return n > 0;
+}
+
+static void probeDev(int i) {
+  hubLock();
+  if (i < 0 || i >= deviceCount) {
+    hubUnlock();
+    return;
+  }
+  Dev snap = devices[i];
+  hubUnlock();
+
+  bool online = false;
+  if (snap.type == "hue" || snap.type == "hue_group") return;
+  if (snap.type == "ha_entity") {
+    online = true;
+  } else if (snap.type == "wiz_bulb") {
+    online = snap.online || wizProbe(snap.ip, kProbeMs);
+  } else if (snap.type == "wled") {
+    online = httpGetOk("http://" + snap.ip.toString() + "/json/info", kProbeMs);
+  } else if (snap.type == "camera") {
+    online = tcpProbe(snap.ip, 554, kProbeMs) || tcpProbe(snap.ip, 80, kProbeMs);
+  } else if (snap.type == "cyberdeck") {
+    online = httpGetOk("http://" + snap.ip.toString() + "/api/status", kProbeMs);
+  } else if (snap.type == "cast") {
+    uint16_t port = snap.port ? snap.port : 8008;
+    online = httpGetOk("http://" + snap.ip.toString() + ":" + String(port) + "/setup/eureka_info",
+                       kProbeMs);
+  } else if (snap.type == "ps5") {
+    online = tcpProbe(snap.ip, 9295, kProbeMs) || tcpProbe(snap.ip, 9302, kProbeMs) ||
+             tcpProbe(snap.ip, 80, kProbeMs);
+  } else if (snap.type == "vizio" || snap.type == "firetv" || snap.type == "sony" ||
+             snap.type == "tcl") {
+    uint16_t port = snap.port ? snap.port : 80;
+    if (snap.type == "vizio" && !snap.port) port = 7345;
+    if (snap.type == "firetv" && !snap.port) port = 5555;
+    if (snap.type == "sony" && !snap.port) port = 8080;
+    if (snap.type == "tcl" && !snap.port) port = 6467;
+    online = tcpProbe(snap.ip, port, kProbeMs);
+  } else {
+    online = tcpProbe(snap.ip, snap.port ? snap.port : 80, kProbeMs);
+  }
+
+  hubLock();
+  if (i < deviceCount && devices[i].id == snap.id) devices[i].online = online;
+  hubUnlock();
+}
+
+static void hubTask(void *) {
+  uint32_t lastWizMs = 0;
+  uint32_t lastHueMs = 0;
+  for (;;) {
+    int n = 0;
+    int burst = 0;
+    hubLock();
+    n = deviceCount;
+    burst = burstLeft;
+    hubUnlock();
+
+    if (WiFi.status() == WL_CONNECTED && n > 0) {
+      uint32_t now = millis();
+      if (burst > 0) {
+        probeDev(probeIdx % n);
+        probeIdx++;
+        hubLock();
+        if (burstLeft > 0) burstLeft = burstLeft - 1;
+        hubUnlock();
+        vTaskDelay(pdMS_TO_TICKS(20));
+        continue;
+      }
+      if (now - lastWizMs > 45000) {
+        lastWizMs = now;
+        wizDiscoverByMac();
+      } else if (now - lastHueMs > 15000) {
+        lastHueMs = now;
+        hueRefreshOnline();
+      } else {
+        probeDev(probeIdx % n);
+        probeIdx++;
+        if (n > 0 && (probeIdx % n) == 0) persistDeviceIps();
+      }
+    }
+    vTaskDelay(pdMS_TO_TICKS(150));
+  }
+}
+
+void deviceHubOnGridChanged() {
+  deviceHubInvalidateHueCreds();
+  deviceHubLoadFromSd();
+}
+
+void deviceHubRequestRefresh() {
+  hubLock();
+  burstLeft = deviceCount;
+  probeIdx = 0;
+  hubUnlock();
 }
 
 void deviceHubBegin() {
+  hubLock();
+  hubUnlock();
   wizUdp.begin(0);
   deviceHubLoadFromSd();
-  deviceHubRefreshOnline();
   avCtrlBegin();
-}
-
-void deviceHubLoop() {
-  if (millis() - lastProbeMs > 30000) {
-    lastProbeMs = millis();
-    deviceHubRefreshOnline();
+  if (!hubTaskHandle) {
+    xTaskCreatePinnedToCore(hubTask, "hub", 8192, nullptr, 0, &hubTaskHandle, 1);
   }
 }
+
+void deviceHubLoop() {}
 
 void deviceHubRefreshOnline() {
-  // Reset WiZ online, rediscover by MAC (DHCP moves them)
-  for (int i = 0; i < deviceCount; i++) {
-    if (devices[i].type == "wiz_bulb") devices[i].online = false;
-  }
-  wizDiscoverByMac();
+  if (WiFi.status() != WL_CONNECTED) return;
   hueRefreshOnline();
-  for (int i = 0; i < deviceCount; i++) {
-    Dev &d = devices[i];
-    if (d.type == "wiz_bulb") {
-      if (!d.online) d.online = wizProbe(d.ip);
-      continue;
-    }
-    if (d.type == "wled") {
-      d.online = httpGetOk("http://" + d.ip.toString() + "/json/info", 1500);
-      continue;
-    }
-    if (d.type == "camera") {
-      d.online = tcpProbe(d.ip, 554, 200) || tcpProbe(d.ip, 80, 200);
-      continue;
-    }
-    if (d.type == "ha_entity") {
-      d.online = true;  // bridged — assume available when connector present
-      continue;
-    }
-    if (d.type == "cyberdeck") {
-      // DHCP drift: try hostname, saved IP, then last-known peer IPs
-      const char *alts[] = {"192.168.4.50", "192.168.4.156"};
-      d.online = false;
-      if (d.hostname.length() &&
-          httpGetOk("http://" + d.hostname + ".local/api/status", 1500)) {
-        d.online = true;
-      } else if (httpGetOk("http://" + d.ip.toString() + "/api/status", 1200)) {
-        d.online = true;
-      } else {
-        for (const char *alt : alts) {
-          if (httpGetOk(String("http://") + alt + "/api/status", 900)) {
-            d.ip = parseIp(alt);
-            d.online = true;
-            Serial.printf("[HUB] CyberDeck found at %s\n", alt);
-            break;
-          }
-        }
-      }
-      continue;
-    }
-    if (d.type == "hue" || d.type == "hue_group") continue;  // hueRefreshOnline
-    if (d.type == "cast") {
-      uint16_t port = d.port ? d.port : 8008;
-      d.online = httpGetOk("http://" + d.ip.toString() + ":" + String(port) + "/setup/eureka_info",
-                           1200);
-      continue;
-    }
-    if (d.type == "ps5") {
-      // Rest Mode answers DDP SRCH on UDP 9302 (HTTP 620); fully awake may also answer.
-      d.online = false;
-      {
-        WiFiUDP udp;
-        if (udp.begin(0)) {
-          const char *srch =
-              "SRCH * HTTP/1.1\ndevice-discovery-protocol-version:00030010\n";
-          if (udp.beginPacket(d.ip, 9302) && udp.write((const uint8_t *)srch, strlen(srch) + 1) &&
-              udp.endPacket()) {
-            uint32_t until = millis() + 700;
-            while (millis() < until) {
-              int sz = udp.parsePacket();
-              if (sz > 0) {
-                d.online = true;
-                break;
-              }
-              delay(10);
-            }
-          }
-          udp.stop();
-        }
-      }
-      if (!d.online)
-        d.online = tcpProbe(d.ip, 9295, 300) || tcpProbe(d.ip, 80, 300);
-      continue;
-    }
-    if (d.type == "vizio" || d.type == "firetv" || d.type == "sony" || d.type == "tcl") {
-      uint16_t port = d.port ? d.port : 80;
-      if (d.type == "vizio" && !d.port) port = 7345;
-      if (d.type == "firetv" && !d.port) port = 5555;
-      if (d.type == "sony" && !d.port) port = 8080;
-      if (d.type == "tcl" && !d.port) port = 6467;
-      d.online = tcpProbe(d.ip, port);
-      continue;
-    }
-    d.online = false;
-  }
+  hubLock();
+  int n = deviceCount;
+  hubUnlock();
+  for (int i = 0; i < n; i++) probeDev(i);
   persistDeviceIps();
 }
 
 void deviceHubFillDevices(JsonArray arr) {
+  hubLock();
   for (int i = 0; i < deviceCount; i++) {
     JsonObject o = arr.add<JsonObject>();
     o["id"] = devices[i].id;
@@ -1303,6 +1360,7 @@ void deviceHubFillDevices(JsonArray arr) {
     o["ip"] = devices[i].ip.toString();
     if (devices[i].hueId.length()) o["hueId"] = devices[i].hueId;
   }
+  hubUnlock();
 }
 
 static void wizAll(bool on) {
@@ -1661,22 +1719,20 @@ const char *deviceHubLastSceneTag() { return lastSceneTagBuf; }
 
 void deviceHubFillSummary(JsonObject obj) {
   int online = 0;
-  int total = deviceCount;
+  int total = 0;
+  bool deck = false;
+  hubLock();
+  total = deviceCount;
   for (int i = 0; i < deviceCount; i++) {
     if (devices[i].online) online++;
+    if (devices[i].type == "cyberdeck" && devices[i].online) deck = true;
   }
+  hubUnlock();
   obj["deviceOnline"] = online;
   obj["deviceTotal"] = total;
   obj["lastSceneId"] = lastSceneIdBuf;
   obj["lastSceneTag"] = lastSceneTagBuf[0] ? lastSceneTagBuf : "—";
   obj["coreOnline"] = true;
-  bool deck = false;
-  for (int i = 0; i < deviceCount; i++) {
-    if (devices[i].type == "cyberdeck" && devices[i].online) {
-      deck = true;
-      break;
-    }
-  }
   obj["deckOnline"] = deck;
 }
 

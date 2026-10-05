@@ -36,8 +36,13 @@
 #define UI_TAB_H 30
 
 #define MAX_ZONES 8
-#define MAX_DEVICES 12
+#define MAX_DEVICES 12  // DRAM cap; CoreClient pages the rest
 #define MAX_SCENES 11
+
+void touch_map_load();
+void touch_cal_start(void (*done)());
+bool touch_cal_active();
+void touch_cal_poll();
 #define UI_THEME_H 34
 #define LOG_LINES 4
 #define LOG_LINE_LEN 40

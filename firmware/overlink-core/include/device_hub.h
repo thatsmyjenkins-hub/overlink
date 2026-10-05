@@ -5,6 +5,8 @@
 
 void deviceHubBegin();
 void deviceHubLoop();
+void deviceHubOnGridChanged();
+void deviceHubRequestRefresh();
 bool deviceHubLoadFromSd();
 bool deviceHubReplaceDevicesJson(const String &json, String &message);
 bool deviceHubAddDevice(JsonVariantConst device, String &message);

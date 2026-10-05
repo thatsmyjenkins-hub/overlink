@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overlink BLE — phone fallback</title>
+  <meta name="description" content="Connect to Overlink Core over Bluetooth when SoftAP Wi‑Fi isn’t visible. Scan 2.4 GHz networks and join from the browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/">OVERLINK</a>
+      <nav class="nav-links">
+        <a href="/#setup">Setup</a>
+        <a href="/flash.html">Flash</a>
+        <a class="nav-cta" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">Bluetooth fallback</p>
+      <h2>Can’t see Overlink-Setup?</h2>
+      <p class="lead">Core always advertises BLE as <strong>Overlink</strong>. Android Chrome (or desktop Chrome) can talk to it from this page — status, 2.4 GHz scan, join house Wi‑Fi — without joining the SoftAP.</p>
+
+      <article class="tile" id="ios-note" style="display:none;margin-bottom:1rem;border-color:var(--amber)">
+        <div class="tag">iPhone</div>
+        <h3>Safari has no Web Bluetooth</h3>
+        <p>Settings → Bluetooth → confirm <strong>Overlink</strong> is advertising. Then join Wi‑Fi <code>Overlink-Setup</code>, or use <strong>nRF Connect</strong> / Serial BLE and send:</p>
+        <p class="note"><code>STATUS</code> · <code>SCAN</code> · <code>JOIN my-ssid|password</code></p>
+      </article>
+
+      <div class="flash-panel">
+        <h3>1 · Connect</h3>
+        <p style="color:var(--dim);margin:0 0 0.75rem">Stay within a few meters. If Party billboard renamed the radio, pick the funny name or tap Show all.</p>
+        <div class="cta-row">
+          <button class="btn solid" id="btnConnect" type="button">Connect Bluetooth</button>
+          <button class="btn" id="btnAll" type="button">Show all BLE devices</button>
+          <button class="btn amber" id="btnDisconnect" type="button" disabled>Disconnect</button>
+        </div>
+        <p class="note" id="bleState">Not connected</p>
+      </div>
+
+      <div class="grid-2" style="margin-top:1.25rem">
+        <div class="flash-panel">
+          <h3>2 · Status</h3>
+          <pre class="note" id="statusBox" style="white-space:pre-wrap;min-height:6rem">—</pre>
+          <button class="btn" id="btnStatus" type="button" disabled>Refresh status</button>
+        </div>
+        <div class="flash-panel">
+          <h3>3 · Join 2.4 GHz Wi‑Fi</h3>
+          <p style="color:var(--dim);margin:0 0 0.5rem">ESP32 cannot see 5 GHz. Empty scan in a car is normal.</p>
+          <div class="cta-row" style="margin-bottom:0.75rem">
+            <button class="btn" id="btnScan" type="button" disabled>Scan networks</button>
+          </div>
+          <div id="netList" class="note">No scan yet</div>
+          <label class="note" style="display:block;margin-top:0.75rem">SSID</label>
+          <input id="ssid" placeholder="network name" style="width:100%;margin:.25rem 0;background:#07100e;border:1px solid var(--line);color:var(--cyan);padding:.55rem;font:inherit;border-radius:3px" />
+          <label class="note" style="display:block">Password</label>
+          <input id="pass" type="password" placeholder="passphrase" style="width:100%;margin:.25rem 0 .75rem;background:#07100e;border:1px solid var(--line);color:var(--cyan);padding:.55rem;font:inherit;border-radius:3px" />
+          <button class="btn amber" id="btnJoin" type="button" disabled>Join + reboot Core</button>
+        </div>
+      </div>
+
+      <article class="tile" style="margin-top:1.5rem">
+        <div class="tag">After join</div>
+        <h3>Leave Bluetooth. Join the house Wi‑Fi.</h3>
+        <p>Core reboots onto the SSID you sent. Phone should leave BLE, join that same network, then open <code>http://overlink.local</code>. SoftAP <code>Overlink-Setup</code> stays up if STA fails.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a class="brand" href="/">OVERLINK</a>
+      <div class="footer-row">
+        <span>Nordic UART BLE fallback</span>
+        <a href="/">← Back to product</a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    const NUS = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+    const NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+    const NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+    const $ = (id) => document.getElementById(id);
+    const hasBt = !!(navigator.bluetooth);
+    if (!hasBt) $("ios-note").style.display = "block";
+
+    let device, server, rx, tx, rxBuf = "";
+    const setState = (t) => { $("bleState").textContent = t; };
+    const setBusy = (on) => {
+      ["btnConnect","btnAll","btnDisconnect","btnStatus","btnScan","btnJoin"].forEach((id) => {
+        const b = $(id);
+        if (!b) return;
+        if (id === "btnConnect" || id === "btnAll") b.disabled = on || !hasBt || !!device;
+        else if (id === "btnDisconnect") b.disabled = on || !device;
+        else b.disabled = on || !rx;
+      });
+      if (!hasBt) { $("btnConnect").disabled = true; $("btnAll").disabled = true; }
+    };
+
+    function parseMaybeJson(text) {
+      const t = text.trim();
+      try { return JSON.parse(t); } catch { return null; }
+    }
+    function onChunk(ev) {
+      const v = new TextDecoder().decode(ev.target.value);
+      rxBuf += v;
+      let nl;
+      while ((nl = rxBuf.indexOf("\n")) >= 0) {
+        const line = rxBuf.slice(0, nl);
+        rxBuf = rxBuf.slice(nl + 1);
+        if (!line.trim()) continue;
+        handleLine(line);
+      }
+    }
+    function handleLine(line) {
+      const j = parseMaybeJson(line);
+      if (j && j.wifi) {
+        $("statusBox").textContent = JSON.stringify(j, null, 2);
+        setState(j.wifi.sta ? ("STA " + (j.wifi.staSsid || "")) : ("AP " + (j.wifi.apSsid || "Overlink-Setup")));
+        return;
+      }
+      if (j && Array.isArray(j.networks)) {
+        if (!j.networks.length) {
+          $("netList").textContent = j.error || "No 2.4 GHz beacons. Type an SSID below or stay on SoftAP.";
+          return;
+        }
+        $("netList").innerHTML = j.networks.map((n) => {
+          const ss = String(n.ssid || "").replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+          return `<button class="btn" type="button" data-ssid="${ss}" style="margin:0.2rem 0.2rem 0 0">${ss} · ${n.rssi} dBm</button>`;
+        }).join("");
+        $("netList").querySelectorAll("[data-ssid]").forEach((b) => {
+          b.onclick = () => { $("ssid").value = b.dataset.ssid; };
+        });
+        return;
+      }
+      if (j && j.reboot) {
+        setState("Core rebooting onto Wi‑Fi…");
+        $("statusBox").textContent = line;
+        return;
+      }
+      $("statusBox").textContent = line;
+    }
+
+    async function send(text) {
+      if (!rx) throw new Error("not connected");
+      const payload = new TextEncoder().encode(text.endsWith("\n") ? text : text + "\n");
+      await rx.writeValue(payload);
+    }
+
+    async function connect(all) {
+      if (!hasBt) { alert("Web Bluetooth needs Chrome or Edge (not iOS Safari)."); return; }
+      setState("Pick Overlink…");
+      const opts = all
+        ? { acceptAllDevices: true, optionalServices: [NUS] }
+        : { filters: [{ namePrefix: "Overlink" }, { namePrefix: "OVERLINK" }, { services: [NUS] }], optionalServices: [NUS] };
+      device = await navigator.bluetooth.requestDevice(opts);
+      device.addEventListener("gattserverdisconnected", () => {
+        device = server = rx = tx = null;
+        setState("Disconnected");
+        setBusy(false);
+      });
+      server = await device.gatt.connect();
+      const svc = await server.getPrimaryService(NUS);
+      tx = await svc.getCharacteristic(NUS_TX);
+      rx = await svc.getCharacteristic(NUS_RX);
+      await tx.startNotifications();
+      tx.addEventListener("characteristicvaluechanged", onChunk);
+      setState("Connected · " + (device.name || "Overlink"));
+      setBusy(false);
+      await send("STATUS");
+    }
+
+    $("btnConnect").onclick = () => connect(false).catch((e) => { setState(e.message || String(e)); device = null; setBusy(false); });
+    $("btnAll").onclick = () => connect(true).catch((e) => { setState(e.message || String(e)); device = null; setBusy(false); });
+    $("btnDisconnect").onclick = () => { try { device && device.gatt.disconnect(); } catch {} };
+    $("btnStatus").onclick = () => send("STATUS").catch((e) => setState(e.message));
+    $("btnScan").onclick = async () => {
+      $("netList").textContent = "scanning…";
+      try { await send("SCAN"); } catch (e) { $("netList").textContent = e.message; }
+    };
+    $("btnJoin").onclick = async () => {
+      const ssid = $("ssid").value.trim();
+      const pass = $("pass").value;
+      if (!ssid) { setState("ssid required"); return; }
+      try {
+        await send(JSON.stringify({ cmd: "join", ssid, pass }));
+        setState("sent join — Core will reboot");
+      } catch (e) { setState(e.message); }
+    };
+    setBusy(false);
+  </script>
+</body>
+</html>

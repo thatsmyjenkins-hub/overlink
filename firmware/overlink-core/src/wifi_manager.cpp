@@ -4,17 +4,31 @@
 #include <ESPmDNS.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
+
+#include "device_hub.h"
+#include "grid_store.h"
 
 static Preferences prefs;
 static DNSServer dns;
 static const char *kApSsid = "Overlink-Setup";
 static const char *kHostname = "overlink";
-static const uint32_t kStaTimeoutMs = 18000;
 static const int kMaxNets = 8;
+static const int kApChannel = 6;
+static const uint32_t kStaTryMs = 7000;
+static const uint32_t kStaPauseMs = 8000;
 
 static bool apUp = false;
 static bool mdnsUp = false;
+static bool scanBusy = false;
 static String lastSsid;
+
+static int staTryIdx = -1;
+static int staRoundStart = 0;
+static uint32_t staTryMs = 0;
+static uint32_t staPauseUntil = 0;
+static uint32_t bootMs = 0;
+static bool staWasUp = false;
 
 struct Cred {
   String ssid;
@@ -57,15 +71,58 @@ static int findNet(const String &ssid) {
   return -1;
 }
 
+static int staChannelOrDefault() {
+  if (WiFi.status() != WL_CONNECTED) return kApChannel;
+  uint8_t primary = kApChannel;
+  wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
+  if (esp_wifi_get_channel(&primary, &second) == ESP_OK && primary >= 1 && primary <= 13)
+    return (int)primary;
+  return kApChannel;
+}
+
 static void startAp() {
+  wifi_country_t country = {};
+  country.cc[0] = 'U';
+  country.cc[1] = 'S';
+  country.cc[2] = '\0';
+  country.schan = 1;
+  country.nchan = 11;
+  country.max_tx_power = 84;
+  country.policy = WIFI_COUNTRY_POLICY_MANUAL;
+  esp_wifi_set_country(&country);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  esp_wifi_set_ps(WIFI_PS_NONE);
+
+  int ch = staChannelOrDefault();
   WiFi.softAPConfig(IPAddress(192, 168, 44, 1), IPAddress(192, 168, 44, 1),
                     IPAddress(255, 255, 255, 0));
-  WiFi.softAP(kApSsid);  // open
-  delay(120);
-  apUp = true;
+  bool ok = WiFi.softAP(kApSsid, nullptr, ch, 0, 4);
+  delay(80);
+  apUp = ok || (WiFi.softAPIP()[0] != 0);
+  dns.stop();
   dns.start(53, "*", WiFi.softAPIP());
-  Serial.printf("[WIFI] SoftAP %s → http://%s\n", kApSsid,
-                WiFi.softAPIP().toString().c_str());
+  Serial.printf("[WIFI] SoftAP %s ch%d → http://%s (%s)\n", kApSsid, ch,
+                WiFi.softAPIP().toString().c_str(), ok ? "ok" : "retry");
+}
+
+static void stopApIfIdle() {
+  if (!apUp) return;
+  if (WiFi.softAPgetStationNum() > 0) return;
+  dns.stop();
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+  apUp = false;
+  Serial.println("[WIFI] SoftAP down — STA only");
+}
+
+static void ensureAp() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  wifi_mode_t mode = WiFi.getMode();
+  IPAddress ip = WiFi.softAPIP();
+  if (mode == WIFI_STA || ip[0] == 0 || !apUp) {
+    WiFi.mode(WIFI_AP_STA);
+    startAp();
+  }
 }
 
 static void startMdns() {
@@ -77,88 +134,104 @@ static void startMdns() {
   }
 }
 
-static bool tryConnect(const String &ssid, const String &pass, uint32_t timeoutMs) {
-  Serial.printf("[WIFI] STA → %s\n", ssid.c_str());
-  WiFi.begin(ssid.c_str(), pass.c_str());
-  uint32_t t0 = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - t0 < timeoutMs) {
-    delay(200);
-    Serial.print('.');
-  }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    lastSsid = ssid;
-    prefs.putString("last", lastSsid);
-    Serial.printf("[WIFI] STA IP %s\n", WiFi.localIP().toString().c_str());
-    startMdns();
-    return true;
-  }
-  return false;
+static void beginStaTry(int idx) {
+  if (idx < 0 || idx >= netCount) return;
+  Serial.printf("[WIFI] STA try %s\n", nets[idx].ssid.c_str());
+  WiFi.begin(nets[idx].ssid.c_str(), nets[idx].pass.c_str());
+  staTryIdx = idx;
+  staTryMs = millis();
 }
 
-// Sticky: last SSID first; else strongest saved in scan
-static bool connectSaved() {
-  if (netCount == 0) return false;
-
-  if (lastSsid.length()) {
-    int i = findNet(lastSsid);
-    if (i >= 0 && tryConnect(nets[i].ssid, nets[i].pass, kStaTimeoutMs)) {
-      return true;
-    }
-  }
-
-  int n = WiFi.scanNetworks(/*async=*/false, /*hidden=*/true);
-  int bestIdx = -1;
-  int bestRssi = -999;
-  for (int s = 0; s < n; s++) {
-    String ssid = WiFi.SSID(s);
-    int ni = findNet(ssid);
-    if (ni < 0) continue;
-    int rssi = WiFi.RSSI(s);
-    if (rssi > bestRssi) {
-      bestRssi = rssi;
-      bestIdx = ni;
-    }
-  }
-  WiFi.scanDelete();
-
-  if (bestIdx >= 0) {
-    return tryConnect(nets[bestIdx].ssid, nets[bestIdx].pass, kStaTimeoutMs);
-  }
-
-  // Fall back: try each saved in order
-  for (int i = 0; i < netCount; i++) {
-    if (nets[i].ssid == lastSsid) continue;
-    if (tryConnect(nets[i].ssid, nets[i].pass, 10000)) return true;
-  }
-  return false;
+static void onStaUp() {
+  lastSsid = WiFi.SSID();
+  prefs.putString("last", lastSsid);
+  Serial.printf("[WIFI] STA IP %s ch%d\n", WiFi.localIP().toString().c_str(),
+                staChannelOrDefault());
+  startMdns();
+  String msg;
+  if (gridStoreOnWifiJoin(lastSsid.c_str(), nullptr, msg)) {
+    Serial.printf("[GRID] %s\n", msg.c_str());
+    deviceHubOnGridChanged();
+  } else
+    Serial.printf("[GRID] wifi join: %s\n", msg.c_str());
 }
 
 void wifiManagerBegin() {
   prefs.begin("overlink", false);
   loadNets();
+  bootMs = millis();
 
   WiFi.persistent(false);
   WiFi.setHostname(kHostname);
   WiFi.mode(WIFI_AP_STA);
+  WiFi.setSleep(false);
+  esp_wifi_set_ps(WIFI_PS_NONE);
   startAp();
 
-  if (netCount > 0) {
-    if (!connectSaved()) {
-      Serial.println("[WIFI] STA failed — SoftAP stays up for reconfigure");
-    }
-  } else {
+  if (netCount > 0)
+    Serial.println("[WIFI] SoftAP live — STA retries in background");
+  else
     Serial.println("[WIFI] No saved nets — SoftAP setup mode");
-  }
 }
 
 void wifiManagerLoop() {
   if (apUp) dns.processNextRequest();
 
+  bool up = (WiFi.status() == WL_CONNECTED);
+  if (up && !staWasUp) {
+    staWasUp = true;
+    onStaUp();
+  } else if (!up) {
+    staWasUp = false;
+  }
+
   static uint32_t last = 0;
-  if (millis() - last > 4000) {
+  static uint32_t staUpSince = 0;
+  if (millis() - last > 2000) {
     last = millis();
-    if (wifiStaUp() && !mdnsUp) startMdns();
+    if (up) {
+      if (!staUpSince) staUpSince = millis();
+      if (!mdnsUp) startMdns();
+      if (apUp && millis() - staUpSince > 4000) stopApIfIdle();
+    } else {
+      staUpSince = 0;
+      ensureAp();
+    }
+  }
+
+  if (scanBusy || up || netCount == 0) return;
+  if (millis() - bootMs < 1500) return;
+  if (millis() < staPauseUntil) return;
+
+  if (staTryIdx < 0) {
+    int i = lastSsid.length() ? findNet(lastSsid) : 0;
+    if (i < 0) i = 0;
+    staRoundStart = i;
+    beginStaTry(i);
+    return;
+  }
+  if (staTryIdx >= netCount) {
+    staTryIdx = -1;
+    staPauseUntil = millis() + kStaPauseMs;
+    return;
+  }
+
+  if (up) return;
+
+  if (millis() - staTryMs > kStaTryMs) {
+    Serial.printf("[WIFI] STA timeout %s\n", nets[staTryIdx].ssid.c_str());
+    WiFi.disconnect(false, false);
+    delay(40);
+    ensureAp();
+    int next = staTryIdx + 1;
+    if (next >= netCount) next = 0;
+    if (next == staRoundStart) {
+      staTryIdx = -1;
+      staPauseUntil = millis() + kStaPauseMs;
+      Serial.println("[WIFI] STA paused — SoftAP stays up");
+    } else {
+      beginStaTry(next);
+    }
   }
 }
 
@@ -180,7 +253,6 @@ bool wifiSaveNetwork(const String &ssid, const String &pass) {
   int i = findNet(ssid);
   if (i < 0) {
     if (netCount >= kMaxNets) {
-      // drop oldest
       for (int j = 1; j < netCount; j++) nets[j - 1] = nets[j];
       netCount--;
     }
@@ -212,6 +284,7 @@ void wifiFillStatus(JsonObject obj) {
   obj["ap"] = apUp;
   obj["apSsid"] = kApSsid;
   obj["apIp"] = apUp ? WiFi.softAPIP().toString() : "";
+  obj["apClients"] = apUp ? (int)WiFi.softAPgetStationNum() : 0;
   obj["sta"] = wifiStaUp();
   obj["staSsid"] = wifiStaSsid();
   obj["staIp"] = wifiStaIp();
@@ -222,6 +295,7 @@ void wifiFillStatus(JsonObject obj) {
 }
 
 void wifiScanTo(JsonArray arr) {
+  scanBusy = true;
   int n = WiFi.scanNetworks(/*async=*/false, /*hidden=*/false);
   for (int i = 0; i < n; i++) {
     JsonObject o = arr.add<JsonObject>();
@@ -230,4 +304,5 @@ void wifiScanTo(JsonArray arr) {
     o["secure"] = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
   }
   WiFi.scanDelete();
+  scanBusy = false;
 }

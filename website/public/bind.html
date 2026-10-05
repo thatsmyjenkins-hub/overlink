@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overlink Bind — phone pairing</title>
+  <meta name="description" content="Second-screen bind for Hubspace, Home Assistant, Hue, Wink, and ratgdo. Join house Wi‑Fi, then open Core’s bind page." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/">OVERLINK</a>
+      <nav class="nav-links">
+        <a href="/#setup">Setup</a>
+        <a href="/ble.html">BLE</a>
+        <a href="/flash.html">Flash</a>
+        <a class="nav-cta" href="https://github.com/thatsmyjenkins-hub/overlink" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">Second screen</p>
+      <h2>Bind Hubspace (and friends) on your phone</h2>
+      <p class="lead">TV / Ops → CONN shows a code + QR. This phone types the login. Same house Wi‑Fi as Core — no cloud relay required.</p>
+
+      <article class="tile" style="margin-bottom:1rem">
+        <div class="tag">Works now</div>
+        <h3>Hubspace · Home Assistant · Hue · Wink · ratgdo</h3>
+        <p>Hubspace = lock / entry lamp / strip. Hue = press the bridge button. MyQ cloud stays blocked — ratgdo IP instead. Nest / Ring OAuth is not wired yet.</p>
+      </article>
+
+      <div class="flash-panel">
+        <h3>1 · Join house Wi‑Fi</h3>
+        <p style="color:var(--dim);margin:0 0 0.75rem">Same 2.4/5 GHz LAN as Core. Then open the bind page on Core (mDNS or IP).</p>
+        <div class="cta-row">
+          <a class="btn solid" href="http://overlink.local/bind">Open overlink.local/bind</a>
+          <a class="btn" href="http://192.168.44.1/bind">SoftAP 192.168.44.1</a>
+        </div>
+      </div>
+
+      <div class="flash-panel" style="margin-top:1.25rem">
+        <h3>2 · Or enter Core IP</h3>
+        <p style="color:var(--dim);margin:0 0 0.5rem">If mDNS fails (some Android / guest networks), type the STA IP from Ops → NETS.</p>
+        <label class="note" style="display:block">Core IP</label>
+        <input id="ip" placeholder="192.168.4.135" style="width:100%;margin:.25rem 0 .75rem;background:#07100e;border:1px solid var(--line);color:var(--cyan);padding:.55rem;font:inherit;border-radius:3px" />
+        <button class="btn amber" id="go" type="button">Open bind on Core</button>
+        <p class="note" id="hint" style="margin-top:.6rem"></p>
+      </div>
+
+      <article class="tile" style="margin-top:1.5rem">
+        <div class="tag">TV + phone</div>
+        <h3>How the pairing feels</h3>
+        <p>On a laptop/TV portal: Ops → CONN → pick Hubspace → <strong>BIND ON PHONE</strong>. Big code + QR. Phone opens this page (or scans the QR) → types email/password → Core imports devices. BED/OFF still never auto-unlock or auto-open the garage.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a class="brand" href="/">OVERLINK</a>
+      <div class="footer-row">
+        <span>LAN second-screen bind</span>
+        <a href="/">← Back to product</a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    try {
+      const last = localStorage.getItem("ol_core_ip");
+      if (last) $("ip").value = last;
+    } catch {}
+    $("go").onclick = () => {
+      const ip = $("ip").value.trim().replace(/^https?:\/\//, "").split("/")[0];
+      if (!ip) { $("hint").textContent = "enter Core IP"; return; }
+      try { localStorage.setItem("ol_core_ip", ip); } catch {}
+      location.href = "http://" + ip + "/bind";
+    };
+  </script>
+</body>
+</html>

@@ -2,13 +2,45 @@
 
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 #include <WiFi.h>
+
+static void formatIp(char *dst, size_t n, const IPAddress &ip) {
+  snprintf(dst, n, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+}
 
 void CoreClient::begin() {
   coreIp_.fromString(CORE_FALLBACK_IP);
+  Preferences prefs;
+  prefs.begin("walldeck", true);
+  String saved = prefs.getString("core_ip", "");
+  prefs.end();
+  IPAddress ip;
+  if (saved.length() && ip.fromString(saved)) {
+    savedIp_ = ip;
+    hasSavedIp_ = true;
+    coreIp_ = ip;
+  }
+  formatIp(coreHost_, sizeof(coreHost_), coreIp_);
   lastPollMs_ = 0;
   failStreak_ = 0;
   coreOnline_ = false;
+}
+
+bool CoreClient::setCoreHost(const char *ip) {
+  IPAddress parsed;
+  if (!ip || !parsed.fromString(ip)) return false;
+  Preferences prefs;
+  prefs.begin("walldeck", false);
+  prefs.putString("core_ip", parsed.toString());
+  prefs.end();
+  savedIp_ = parsed;
+  hasSavedIp_ = true;
+  formatIp(coreHost_, sizeof(coreHost_), parsed);
+  coreIp_ = parsed;
+  lastPollMs_ = 0;
+  tryStatus(parsed);
+  return true;
 }
 
 bool CoreClient::httpGet(const String &path, String &body, int timeoutMs) {
@@ -36,30 +68,35 @@ bool CoreClient::httpPost(const String &path, const String &json, String &body, 
   return code == 200;
 }
 
+bool CoreClient::tryStatus(const IPAddress &ip) {
+  if ((uint32_t)ip == 0) return false;
+  IPAddress prev = coreIp_;
+  coreIp_ = ip;
+  String body;
+  if (!httpGet("/api/status", body, 2000)) {
+    coreIp_ = prev;
+    return false;
+  }
+  JsonDocument doc;
+  if (deserializeJson(doc, body) || !(doc["ok"] | false)) {
+    coreIp_ = prev;
+    return false;
+  }
+  const char *name = doc["grid"]["name"] | "OVERLINK";
+  strlcpy(homeName_, name, sizeof(homeName_));
+  formatIp(coreHost_, sizeof(coreHost_), ip);
+  return true;
+}
+
 bool CoreClient::ensureCore() {
   IPAddress resolved;
   if (WiFi.hostByName(CORE_HOSTNAME ".local", resolved) && resolved) {
-    coreIp_ = resolved;
+    if (tryStatus(resolved)) return true;
   }
-
-  String body;
-  if (!httpGet("/api/status", body, 2000)) {
-    IPAddress fb;
-    fb.fromString(CORE_FALLBACK_IP);
-    if (coreIp_ != fb) {
-      coreIp_ = fb;
-      if (!httpGet("/api/status", body, 2000)) return false;
-    } else {
-      return false;
-    }
-  }
-
-  JsonDocument doc;
-  if (deserializeJson(doc, body)) return false;
-  if (!(doc["ok"] | false)) return false;
-  const char *name = doc["grid"]["name"] | "OVERLINK";
-  strlcpy(homeName_, name, sizeof(homeName_));
-  return true;
+  if (hasSavedIp_ && tryStatus(savedIp_)) return true;
+  IPAddress fb;
+  if (fb.fromString(CORE_FALLBACK_IP) && tryStatus(fb)) return true;
+  return false;
 }
 
 bool CoreClient::refreshCatalog() {
@@ -131,6 +168,56 @@ bool CoreClient::refreshCatalog() {
   return zoneCount_ > 0 || sceneCount_ > 0;
 }
 
+void CoreClient::cycleDeviceZone() {
+  String body;
+  if (!httpGet("/api/devices", body, 2500)) {
+    deviceZone_[0] = 0;
+    devicePage_ = 0;
+    return;
+  }
+  JsonDocument doc;
+  if (deserializeJson(doc, body)) return;
+  char seen[MAX_ZONES][14];
+  int n = 0;
+  for (JsonObject d : doc["devices"].as<JsonArray>()) {
+    const char *zone = d["zoneId"] | "";
+    if (!zone[0]) continue;
+    bool found = false;
+    for (int i = 0; i < n; i++) {
+      if (!strcmp(seen[i], zone)) {
+        found = true;
+        break;
+      }
+    }
+    if (found || n >= MAX_ZONES) continue;
+    strlcpy(seen[n], zone, sizeof(seen[0]));
+    n++;
+  }
+  if (!deviceZone_[0]) {
+    if (n) strlcpy(deviceZone_, seen[0], sizeof(deviceZone_));
+  } else {
+    int idx = -1;
+    for (int i = 0; i < n; i++) {
+      if (!strcmp(seen[i], deviceZone_)) idx = i;
+    }
+    if (idx < 0 || idx + 1 >= n) deviceZone_[0] = 0;
+    else strlcpy(deviceZone_, seen[idx + 1], sizeof(deviceZone_));
+  }
+  devicePage_ = 0;
+  refreshDevices();
+}
+
+void CoreClient::setDeviceWindow(const char *zoneId, int page) {
+  strlcpy(deviceZone_, zoneId ? zoneId : "", sizeof(deviceZone_));
+  devicePage_ = page < 0 ? 0 : page;
+  if (!refreshDevices()) return;
+  int pages = devicePages();
+  if (devicePage_ >= pages) {
+    devicePage_ = pages - 1;
+    refreshDevices();
+  }
+}
+
 bool CoreClient::refreshDevices() {
   String body;
   if (!httpGet("/api/devices", body, 2500)) return false;
@@ -138,29 +225,21 @@ bool CoreClient::refreshDevices() {
   if (deserializeJson(doc, body)) return false;
   deviceCount_ = 0;
   JsonArray arr = doc["devices"].as<JsonArray>();
-  // Prefer room controls (groups/AV) over individual bulbs — RAM-limited.
-  auto rank = [](const char *type) -> int {
-    if (!type) return 9;
-    if (!strcmp(type, "hue_group")) return 0;
-    if (!strcmp(type, "firetv") || !strcmp(type, "cast")) return 1;
-    if (!strcmp(type, "cyberdeck") || !strcmp(type, "wled") || !strcmp(type, "wiz_bulb")) return 2;
-    if (!strcmp(type, "vizio") || !strcmp(type, "sony") || !strcmp(type, "ps5")) return 3;
-    if (!strcmp(type, "hue")) return 4;
-    return 5;
-  };
-  auto take = [&](int wantRank) {
-    for (JsonObject d : arr) {
-      if (deviceCount_ >= MAX_DEVICES) return;
-      if (rank(d["type"] | "") != wantRank) continue;
-      CoreDevice &dst = devices_[deviceCount_++];
-      strlcpy(dst.id, d["id"] | "", sizeof(dst.id));
-      strlcpy(dst.zoneId, d["zoneId"] | "", sizeof(dst.zoneId));
-      strlcpy(dst.type, d["type"] | "", sizeof(dst.type));
-      strlcpy(dst.name, d["name"] | dst.id, sizeof(dst.name));
-      dst.online = d["online"] | false;
-    }
-  };
-  for (int r = 0; r <= 5; r++) take(r);
+  const int skip = devicePage_ * MAX_DEVICES;
+  int matched = 0;
+  for (JsonObject d : arr) {
+    const char *zone = d["zoneId"] | "";
+    if (deviceZone_[0] && strcmp(zone, deviceZone_)) continue;
+    int index = matched++;
+    if (index < skip || deviceCount_ >= MAX_DEVICES) continue;
+    CoreDevice &dst = devices_[deviceCount_++];
+    strlcpy(dst.id, d["id"] | "", sizeof(dst.id));
+    strlcpy(dst.zoneId, zone, sizeof(dst.zoneId));
+    strlcpy(dst.type, d["type"] | "", sizeof(dst.type));
+    strlcpy(dst.name, d["name"] | dst.id, sizeof(dst.name));
+    dst.online = d["online"] | false;
+  }
+  deviceTotal_ = matched;
   return true;
 }
 

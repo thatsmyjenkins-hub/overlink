@@ -7,6 +7,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
 #include <Adafruit_NeoPixel.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "board_pins.h"
 #include "seed_home.h"
@@ -19,6 +21,7 @@
 #include "grid_store.h"
 #include "party_tricks.h"
 #include "relay_client.h"
+#include "ble_link.h"
 
 static SPIClass lcdSPI(FSPI);
 static Adafruit_ST7789 tft(&lcdSPI, PIN_LCD_CS, PIN_LCD_DC, PIN_LCD_RST);
@@ -256,12 +259,27 @@ void loop() {
       grideyeLiteBegin();
       servicesUp = true;
     }
-    deviceHubLoop();
     relayClientLoop();
     partyTricksLoop();
     automationLoop();
     grideyeLiteLoop();
   }
+
+  // BLE join fallback only while the stick is still on SoftAP (shares the radio).
+  static bool bleStarted = false;
+  if (wifiApUp() && !wifiStaUp()) {
+    if (!bleStarted) {
+      bleLinkBegin();
+      bleStarted = true;
+    }
+    bleLinkLoop();
+  } else if (bleStarted) {
+    bleLinkPause();
+    bleStarted = false;
+  }
+
+  // Yield so hubTask (priority 0, same core) can probe.
+  vTaskDelay(1);
 
   // RGB pulse: cyan in setup, green when STA (hold amber during OTA)
   static uint32_t t0 = 0;

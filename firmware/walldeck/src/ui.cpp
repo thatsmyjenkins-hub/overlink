@@ -63,6 +63,8 @@ static const char *const kPartyPresets[] = {
     "OVERLINK ONLINE",
 };
 static const int kPartyPresetCount = 4;
+static int devPage = 0;
+static char ipEdit[16] = "";
 
 static void showDash();
 static void showZones();
@@ -1221,8 +1223,96 @@ static void showWled() {
   drawTabs(scr, Screen::Wled);
 }
 
+static void showCoreIp();
+
+static void onIpKey(lv_event_t *e) {
+  const char *k = static_cast<const char *>(lv_event_get_user_data(e));
+  if (!k) return;
+  if (k[0] == '<') {
+    size_t n = strlen(ipEdit);
+    if (n) ipEdit[n - 1] = 0;
+    showCoreIp();
+    return;
+  }
+  if (k[0] == 'S') {
+    if (!g_ctx || !g_ctx->core || !g_ctx->core->setCoreHost(ipEdit)) ui_log("> BAD IP");
+    else ui_log("> CORE SAVED");
+    showDevices();
+    return;
+  }
+  if (k[0] == 'X') {
+    showDevices();
+    return;
+  }
+  size_t n = strlen(ipEdit);
+  if (n + 1 < sizeof(ipEdit)) {
+    ipEdit[n] = k[0];
+    ipEdit[n + 1] = 0;
+  }
+  showCoreIp();
+}
+
+static void showCoreIp() {
+  screen = Screen::Devices;
+  clearRoot();
+  lv_obj_t *scr = lv_screen_active();
+  lv_obj_t *hdr = lv_label_create(scr);
+  lv_label_set_text(hdr, "CORE IP");
+  lv_obj_set_style_text_color(hdr, COL_CYAN, 0);
+  lv_obj_set_style_text_font(hdr, UI_FONT, 0);
+  lv_obj_set_pos(hdr, kMargin, 4);
+
+  lv_obj_t *cur = lv_label_create(scr);
+  lv_label_set_text(cur, ipEdit[0] ? ipEdit : "—");
+  lv_obj_set_style_text_color(cur, COL_ACTIVE, 0);
+  lv_obj_set_style_text_font(cur, UI_FONT, 0);
+  lv_obj_set_pos(cur, kMargin, 28);
+
+  static const char *keys[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "<"};
+  for (int i = 0; i < 12; i++) {
+    int col = i % 3;
+    int row = i / 3;
+    placeBtn(scr, keys[i][0] == '<' ? "DEL" : keys[i], onIpKey, (void *)keys[i],
+             kMargin + col * 76, 52 + row * 34, 72, 30);
+  }
+  placeBtn(scr, "SAVE", onIpKey, (void *)"S", kMargin, 196, 108, 32);
+  placeBtn(scr, "CANCEL", onIpKey, (void *)"X", kMargin + 116, 196, 108, 32);
+}
+
+static void onOpenCore(lv_event_t *e) {
+  LV_UNUSED(e);
+  ipEdit[0] = 0;
+  if (g_ctx && g_ctx->core && g_ctx->core->coreHost()[0])
+    strlcpy(ipEdit, g_ctx->core->coreHost(), sizeof(ipEdit));
+  showCoreIp();
+}
+
+static void onCalDone() { showDevices(); }
+
+static void onTouchCal(lv_event_t *e) {
+  LV_UNUSED(e);
+  touch_cal_start(onCalDone);
+}
+
+static void onDevZone(lv_event_t *e) {
+  LV_UNUSED(e);
+  if (g_ctx && g_ctx->core) g_ctx->core->cycleDeviceZone();
+  devPage = 0;
+  showDevices();
+}
+
+static void onDevPage(lv_event_t *e) {
+  devPage += (int)(intptr_t)lv_event_get_user_data(e);
+  if (devPage < 0) devPage = 0;
+  showDevices();
+}
+
 static void showDevices() {
   screen = Screen::Devices;
+  if (g_ctx && g_ctx->core) {
+    g_ctx->core->setDeviceWindow(g_ctx->core->deviceZone(), devPage);
+    devPage = g_ctx->core->devicePage();
+  }
   clearRoot();
   lv_obj_t *scr = lv_screen_active();
 
@@ -1230,13 +1320,37 @@ static void showDevices() {
   lv_label_set_text(hdr, "DEVICES");
   lv_obj_set_style_text_color(hdr, COL_CYAN, 0);
   lv_obj_set_style_text_font(hdr, UI_FONT, 0);
-  lv_obj_set_pos(hdr, kMargin, 4);
+  lv_obj_set_pos(hdr, kMargin, 2);
 
   placeBtn(scr, "< BACK", onGotoBasement, nullptr, kScreenW - 72, 2, 68, 22);
 
+  char zbuf[28] = "ZONE ALL";
+  if (g_ctx && g_ctx->core && g_ctx->core->deviceZone()[0])
+    snprintf(zbuf, sizeof(zbuf), "ZONE %s", g_ctx->core->deviceZone());
+  placeBtn(scr, zbuf, onDevZone, nullptr, kMargin, 26, kScreenW - 2 * kMargin, 24);
+
+  int pages = (g_ctx && g_ctx->core) ? g_ctx->core->devicePages() : 1;
+  int total = (g_ctx && g_ctx->core) ? g_ctx->core->deviceTotal() : 0;
+  int page = (g_ctx && g_ctx->core) ? g_ctx->core->devicePage() + 1 : 1;
+  char pbuf[20];
+  snprintf(pbuf, sizeof(pbuf), "%d/%d · %d", page, pages, total);
+  placeBtn(scr, "PREV", onDevPage, (void *)(intptr_t)-1, kMargin, 52, 64, 24);
+  lv_obj_t *pl = lv_label_create(scr);
+  lv_label_set_text(pl, pbuf);
+  lv_obj_set_style_text_color(pl, COL_DIM, 0);
+  lv_obj_set_style_text_font(pl, UI_FONT_SM, 0);
+  lv_obj_align(pl, LV_ALIGN_TOP_MID, 0, 56);
+  placeBtn(scr, "NEXT", onDevPage, (void *)(intptr_t)1, kScreenW - kMargin - 64, 52, 64, 24);
+
+  char coreBuf[28];
+  const char *host = (g_ctx && g_ctx->core) ? g_ctx->core->coreHost() : "";
+  snprintf(coreBuf, sizeof(coreBuf), "CORE %s", host[0] ? host : "—");
+  placeBtn(scr, coreBuf, onOpenCore, nullptr, kMargin, 78, kScreenW - 78, 24);
+  placeBtn(scr, "CAL", onTouchCal, nullptr, kScreenW - 72, 78, 68, 24);
+
   lv_obj_t *list = lv_obj_create(scr);
-  lv_obj_set_pos(list, kMargin, 28);
-  lv_obj_set_size(list, kScreenW - 2 * kMargin, kScreenH - 28 - 36);
+  lv_obj_set_pos(list, kMargin, 106);
+  lv_obj_set_size(list, kScreenW - 2 * kMargin, kScreenH - 106 - 30);
   lv_obj_set_style_bg_color(list, COL_BG, 0);
   lv_obj_set_style_border_width(list, 0, 0);
   lv_obj_set_style_pad_all(list, 2, 0);
@@ -1275,7 +1389,7 @@ static void showDevices() {
     lv_obj_center(tl);
   }
 
-  if (!g_ctx || !g_ctx->core) return;
+  if (g_ctx && g_ctx->core)
   for (size_t i = 0; i < g_ctx->core->deviceCount(); i++) {
     const CoreDevice &d = g_ctx->core->device(i);
     lv_obj_t *row = lv_obj_create(list);
@@ -1296,7 +1410,7 @@ static void showDevices() {
     lv_obj_set_style_text_font(name, UI_FONT, 0);
 
     if (strcmp(d.type, "wiz_bulb") == 0 || strcmp(d.type, "wled") == 0 ||
-        strcmp(d.type, "hue") == 0) {
+        strcmp(d.type, "hue") == 0 || strcmp(d.type, "hue_group") == 0) {
       lv_obj_t *tog = lv_button_create(row);
       lv_obj_set_size(tog, 44, 26);
       stylePanelBtn(tog, false);
@@ -1341,6 +1455,7 @@ void ui_init(AppContext *ctx) {
 
 void ui_refresh(AppContext *ctx) {
   g_ctx = ctx;
+  if (touch_cal_active()) return;
   if (screen == Screen::Grace) {
     static uint32_t lastGrace = 0;
     if (millis() - lastGrace > 450) {

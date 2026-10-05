@@ -192,7 +192,7 @@ static void handleDevices() {
 }
 
 static void handleProbe() {
-  deviceHubRefreshOnline();
+  deviceHubRequestRefresh();
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
@@ -730,7 +730,7 @@ void webPortalBegin() {
     if (ok) {
       deviceHubInvalidateHueCreds();
       deviceHubLoadFromSd();
-      deviceHubRefreshOnline();
+      deviceHubRequestRefresh();
     }
     sendJsonOk(ok, msg);
   });

@@ -5,6 +5,7 @@
 #include <lvgl.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
+#include <Preferences.h>
 
 #include "config.h"
 #include "wifi_config.h"
@@ -75,16 +76,105 @@ void pump_ui(int times = 1) {
   }
 }
 
+// Factory map matches the old hardcoded portrait range. CAL on Devices replaces it.
+struct TouchMap {
+  int tlX = 200;
+  int tlY = 240;
+  int brX = 3700;
+  int brY = 3800;
+};
+static TouchMap touchMap;
+static int calStep = 0;
+static bool calHold = false;
+static int calRawX = 0;
+static int calRawY = 0;
+static int calPaint = 0;
+static void (*calDone)() = nullptr;
+
+void touch_map_load() {
+  Preferences prefs;
+  prefs.begin("walldeck", true);
+  touchMap.tlX = prefs.getInt("tlx", 200);
+  touchMap.tlY = prefs.getInt("tly", 240);
+  touchMap.brX = prefs.getInt("brx", 3700);
+  touchMap.brY = prefs.getInt("bry", 3800);
+  prefs.end();
+}
+
+static void calPaintMsg(const char *msg) {
+  lv_obj_t *scr = lv_screen_active();
+  lv_obj_clean(scr);
+  lv_obj_set_style_bg_color(scr, lv_color_hex(0x0A1210), 0);
+  lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+  lv_obj_t *lbl = lv_label_create(scr);
+  lv_label_set_text(lbl, msg);
+  lv_obj_set_width(lbl, SCREEN_WIDTH - 16);
+  lv_obj_set_style_text_color(lbl, lv_color_hex(0x3DDC97), 0);
+  lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+}
+
+void touch_cal_start(void (*done)()) {
+  calDone = done;
+  calStep = 1;
+  calHold = false;
+  calPaint = 1;
+}
+
+bool touch_cal_active() { return calStep != 0; }
+
+void touch_cal_poll() {
+  if (calPaint == 1) calPaintMsg("TAP\nTOP LEFT");
+  else if (calPaint == 2) calPaintMsg("TAP\nBOTTOM RIGHT");
+  else if (calPaint == 3) calPaintMsg("TOO CLOSE\nTAP TOP LEFT");
+  else if (calPaint == 4) {
+    Preferences prefs;
+    prefs.begin("walldeck", false);
+    prefs.putInt("tlx", touchMap.tlX);
+    prefs.putInt("tly", touchMap.tlY);
+    prefs.putInt("brx", touchMap.brX);
+    prefs.putInt("bry", touchMap.brY);
+    prefs.end();
+    calStep = 0;
+    void (*done)() = calDone;
+    calDone = nullptr;
+    if (done) done();
+  }
+  calPaint = 0;
+}
+
 void touchscreen_read(lv_indev_t *indev, lv_indev_data_t *data) {
   if (touchscreen.tirqTouched() && touchscreen.touched()) {
     TS_Point p = touchscreen.getPoint();
     data->state = LV_INDEV_STATE_PRESSED;
-    // Portrait mapping (matches TFT rotation 0)
-    data->point.x = constrain(map(p.x, 200, 3700, 0, SCREEN_WIDTH - 1), 0, SCREEN_WIDTH - 1);
-    data->point.y = constrain(map(p.y, 240, 3800, 0, SCREEN_HEIGHT - 1), 0, SCREEN_HEIGHT - 1);
+    data->point.x =
+        constrain(map(p.x, touchMap.tlX, touchMap.brX, 0, SCREEN_WIDTH - 1), 0, SCREEN_WIDTH - 1);
+    data->point.y =
+        constrain(map(p.y, touchMap.tlY, touchMap.brY, 0, SCREEN_HEIGHT - 1), 0, SCREEN_HEIGHT - 1);
     power_touch_activity();
+    if (calStep && !calHold) {
+      calHold = true;
+      if (calStep == 1) {
+        calRawX = p.x;
+        calRawY = p.y;
+        calStep = 2;
+        calPaint = 2;
+      } else {
+        if (abs(p.x - calRawX) > 400 && abs(p.y - calRawY) > 400) {
+          touchMap.tlX = calRawX;
+          touchMap.tlY = calRawY;
+          touchMap.brX = p.x;
+          touchMap.brY = p.y;
+          calPaint = 4;
+        } else {
+          calStep = 1;
+          calPaint = 3;
+        }
+      }
+    }
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
+    calHold = false;
   }
 }
 
@@ -159,6 +249,7 @@ void setup() {
 
   lv_init();
 
+  touch_map_load();
   touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
   touchscreen.begin(touchscreenSPI);
   touchscreen.setRotation(0);
@@ -197,6 +288,7 @@ void loop() {
 
   power_loop();
   power_try_deep_sleep(!otaBusy);
+  touch_cal_poll();
 
   unsigned long now = millis();
   unsigned long pumpGap = power_display_asleep() ? POWER_LOOP_IDLE_MS : 10UL;
